@@ -780,6 +780,19 @@ const Onboard = (props: Props) => {
                     {_t("onboard.create-account-credit", { n: accountCredit })}
                   </Button>
                 </div>
+                <div>
+                  <Button
+                    className="align-self-center"
+                    // disabled={accountCredit <= 0 || (isChecked && rcError !== "")}
+                    onClick={() => {
+                      setCreateOption("credit");
+                      setShowModal(true);
+                      setStep("sign");
+                    }}
+                  >
+                    Pay with bitcoin lightning
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
@@ -812,6 +825,7 @@ const Onboard = (props: Props) => {
           </Link>
         </div>
       )}
+
       <Modal
         animation={false}
         show={showModal}

@@ -8,7 +8,7 @@ import useLocalStorage from "react-use/lib/useLocalStorage";
 import { pageMapDispatchToProps, pageMapStateToProps, PageProps } from "./common";
 import { PREFIX } from "../util/local-storage";
 import { signUp } from "../api/private-api";
-import Feedback, { error } from "../components/feedback";
+import Feedback, { error, success } from "../components/feedback";
 import { _t } from "../i18n";
 import Meta from "../components/meta";
 import ScrollToTop from "../components/scroll-to-top";
@@ -20,12 +20,18 @@ import { handleInvalid, handleOnInput } from "../util/input-util";
 import { getAccounts } from "../api/hive";
 import "./sign-up.scss";
 import { Link } from "react-router-dom";
-import { b64uEnc } from "../util/b64";
+import { b64uEnc, hexEnc } from "../util/b64";
 import { Spinner } from "@ui/spinner";
 import { FormControl } from "@ui/input";
 import { Button } from "@ui/button";
 import { Form } from "@ui/form";
 import useDebounce from "react-use/lib/useDebounce";
+import Onboard from "./onboard";
+import { OnboardUser } from "../components/onboard";
+import activeUser from "../store/active-user";
+import { generatePassword, getPrivateKeys } from "../helper/onBoard-helper";
+import QRCode from "react-qr-code";
+import clipboard from "../util/clipboard";
 
 enum Stage {
   FORM = "form",
@@ -54,6 +60,10 @@ export const SignUp = (props: PageProps) => {
   const [isDisabled, setIsDisabled] = useState(false);
   const [registrationError, setRegistrationError] = useState("");
   const [urlHash, setUrlHash] = useState("");
+  const [newUserKeys, setNewUserKeys]: any = useState(null);
+  const [isDownloaded, setIsDownloaded] = useState(true);
+  const [accountPassword, setAccountPassword] = useState("");
+  console.log(props);
 
   const form = useRef<any>();
   const qrCodeRef = useRef<any>();
@@ -166,6 +176,10 @@ export const SignUp = (props: PageProps) => {
     }
   }, [referral, referralTouched]);
 
+  useEffect(() => {
+    initiateAccount();
+  }, []);
+
   const regularRegister = async () => {
     setInProgress(true);
     try {
@@ -212,6 +226,88 @@ export const SignUp = (props: PageProps) => {
       const stringifiedInfo = JSON.stringify(accInfo);
       const hashedInfo = b64uEnc(stringifiedInfo);
       setUrlHash(hashedInfo);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const downloadKeys = async () => {
+    if (newUserKeys) {
+      setIsDownloaded(false);
+      const element = document.createElement("a");
+      const keysToFile = `
+          ${_t("onboard.file-warning")}
+  
+          ${_t("onboard.recommend")}
+          1. ${_t("onboard.recommend-print")}
+          2. ${_t("onboard.recommend-use")}
+          3. ${_t("onboard.recommend-save")}
+          4. ${_t("onboard.recommend-third-party")}
+
+          ${_t("onboard.account-info")}
+
+          Username: ${username}
+
+          Password: ${accountPassword}
+
+          ${_t("onboard.owner-private")} ${newUserKeys.owner}
+  
+          ${_t("onboard.active-private")} ${newUserKeys.active}
+  
+          ${_t("onboard.posting-private")} ${newUserKeys.posting}
+  
+          ${_t("onboard.memo-private")} ${newUserKeys.memo}
+  
+  
+          ${_t("onboard.keys-use")}
+          ${_t("onboard.owner")} ${_t("onboard.owner-use")}   
+          ${_t("onboard.active")} ${_t("onboard.active-use")}  
+          ${_t("onboard.posting")} ${_t("onboard.posting-use")} 
+          ${_t("onboard.memo")} ${_t("onboard.memo-use")}`;
+
+      const file = new Blob([keysToFile.replace(/\n/g, "\r\n")], {
+        type: "text/plain"
+      });
+      element.href = URL.createObjectURL(file);
+      element.download = `${username}_hive_keys.txt`;
+      document.body.appendChild(element);
+      element.click();
+      setIsDownloaded(true);
+    }
+  };
+
+  const formatString = (str: string) => {
+    const first10 = str.substring(0, 10);
+    const last10 = str.substring(str.length - 10);
+
+    return `${first10}...${last10}`;
+  };
+
+  const initiateAccount = async () => {
+    if (!username) {
+      return;
+    }
+
+    try {
+      const password: string = await generatePassword(32);
+      const keys: any = getPrivateKeys(username, password);
+      setNewUserKeys((prev: any) => ({ ...prev, ...keys }));
+      // setAccountPassword(password);
+      const dataToEncode = {
+        username,
+        email: email ? email : "",
+        referral,
+        keys: {
+          activePubKey: keys.activePubkey,
+          postingPubKey: keys.postingPubkey,
+          ownerPubKey: keys.ownerPubkey,
+          memoPubKey: keys.memoPubkey
+        }
+      };
+
+      const stringifiedData = JSON.stringify(dataToEncode);
+      // const hash = hexEnc(stringifiedData);
+      // setUrlHash(hash);
     } catch (err) {
       console.log(err);
     }
@@ -272,6 +368,7 @@ export const SignUp = (props: PageProps) => {
                   className="form-content"
                   ref={form}
                   onSubmit={async (e: React.FormEvent) => {
+                    console.log(username, email, referral);
                     e.preventDefault();
                     e.stopPropagation();
 
@@ -380,80 +477,141 @@ export const SignUp = (props: PageProps) => {
               <></>
             )}
 
-            {stage === Stage.REGISTER_TYPE ? (
+            {/* {stage === Stage.REGISTER_TYPE ? (
               <div className="form-content">
-                <div className="card border border-[--border-color] bg-white rounded mb-3 mt-5">
-                  <div className="bg-gray-100 dark:bg-gray-800 border-b border-[--border-color] p-3">
-                    <b>{_t("sign-up.free-account")}</b>
-                  </div>
-                  <div className="p-3">
-                    <div>{_t("sign-up.free-account-desc")}</div>
-                  </div>
-                  <div className="bg-gray-100 dark:bg-gray-800 border-t border-[--border-color] py-2 px-3">
-                    <Button
-                      className="w-full"
-                      onClick={regularRegister}
-                      icon={inProgress && <Spinner className="w-3.5 h-3.5" />}
-                    >
-                      {_t("sign-up.register-free")}
-                    </Button>
-                  </div>
-                  {registrationError.length > 0 && (
-                    <div className="error">
-                      <small className="error-info">{registrationError}</small>
-                    </div>
-                  )}
+              <div className="card border border-[--border-color] bg-white rounded mb-3 mt-5">
+                <div className="bg-gray-100 dark:bg-gray-800 border-b border-[--border-color] p-3">
+                  <b>{_t("sign-up.free-account")}</b>
                 </div>
-                <div className="card border bg-white border-[--border-color] rounded mb-3">
-                  <div className="bg-gray-100 dark:bg-gray-800 border-b border-[--border-color] p-3">
-                    <b>{_t("sign-up.buy-account")}</b>
-                  </div>
-                  <div className="p-3">
-                    <p>{_t("sign-up.buy-account-desc")}</p>
-                    <ul>
-                      <li>{_t("sign-up.buy-account-li-1")}</li>
-                      <li>{_t("sign-up.buy-account-li-2")}</li>
-                      <li>{_t("sign-up.buy-account-li-3")}</li>
-                    </ul>
-                  </div>
-                  <div className="bg-gray-100 dark:bg-gray-800 border-t border-[--border-color] py-2 px-3">
-                    <Button className="w-full" onClick={() => setStage(Stage.BUY_ACCOUNT)}>
-                      {_t("sign-up.buy-account")} – $2.99
-                    </Button>
-                  </div>
+                <div className="p-3">
+                  <div>{_t("sign-up.free-account-desc")}</div>
                 </div>
-
-                <div className="card border bg-white border-[--border-color] rounded mb-3">
-                  <div className="bg-gray-100 dark:bg-gray-800 border-b border-[--border-color] p-3">
-                    <b>
-                      {props.activeUser
-                        ? _t("onboard.title-active-user")
-                        : _t("onboard.title-visitor")}
-                    </b>
+                <div className="bg-gray-100 dark:bg-gray-800 border-t border-[--border-color] py-2 px-3">
+                  <Button
+                    className="w-full"
+                    onClick={regularRegister}
+                    icon={inProgress && <Spinner className="w-3.5 h-3.5" />}
+                  >
+                    {_t("sign-up.register-free")}
+                  </Button>
+                </div>
+                {registrationError.length > 0 && (
+                  <div className="error">
+                    <small className="error-info">{registrationError}</small>
                   </div>
-                  <div className="p-3">
-                    <p>
-                      {props.activeUser
-                        ? _t("onboard.description-active-user")
-                        : _t("onboard.description-visitor")}
-                    </p>
-                    <ul>
-                      {props.activeUser && <li>{_t("onboard.creating-description")}</li>}
-                      {!props.activeUser && <li>{_t("onboard.asking-description")}</li>}
-                    </ul>
-                  </div>
-                  <div className="bg-gray-100 dark:bg-gray-800 border-t border-[--border-color] py-2 px-3">
-                    <Link to={`/onboard-friend/asking/${urlHash}`}>
-                      <Button className="w-full">
-                        {props.activeUser ? _t("onboard.creating") : _t("onboard.asking")}
-                      </Button>
-                    </Link>
-                  </div>
+                )}
+              </div>
+              <div className="card border bg-white border-[--border-color] rounded mb-3">
+                <div className="bg-gray-100 dark:bg-gray-800 border-b border-[--border-color] p-3">
+                  <b>{_t("sign-up.buy-account")}</b>
+                </div>
+                <div className="p-3">
+                  <p>{_t("sign-up.buy-account-desc")}</p>
+                  <ul>
+                    <li>{_t("sign-up.buy-account-li-1")}</li>
+                    <li>{_t("sign-up.buy-account-li-2")}</li>
+                    <li>{_t("sign-up.buy-account-li-3")}</li>
+                  </ul>
+                </div>
+                <div className="bg-gray-100 dark:bg-gray-800 border-t border-[--border-color] py-2 px-3">
+                  <Button className="w-full" onClick={() => setStage(Stage.BUY_ACCOUNT)}>
+                    {_t("sign-up.buy-account")} – $2.99
+                  </Button>
                 </div>
               </div>
+
+              <div className="card border bg-white border-[--border-color] rounded mb-3">
+                <div className="bg-gray-100 dark:bg-gray-800 border-b border-[--border-color] p-3">
+                  <b>
+                    {props.activeUser
+                      ? _t("onboard.title-active-user")
+                      : _t("onboard.title-visitor")}
+                  </b>
+                </div>
+                <div className="p-3">
+                  <p>
+                    {props.activeUser
+                      ? _t("onboard.description-active-user")
+                      : _t("onboard.description-visitor")}
+                  </p>
+                  <ul>
+                    {props.activeUser && <li>{_t("onboard.creating-description")}</li>}
+                    {!props.activeUser && <li>{_t("onboard.asking-description")}</li>}
+                  </ul>
+                </div>
+                <div className="bg-gray-100 dark:bg-gray-800 border-t border-[--border-color] py-2 px-3">
+                  <Link to={`/onboard-friend/asking/${urlHash}`}>
+                    <Button className="w-full">
+                      {props.activeUser ? _t("onboard.creating") : _t("onboard.asking")}
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+              //  )}
             ) : (
               <></>
+            )} */}
+
+            {stage === Stage.REGISTER_TYPE && (
+              <div className="card border bg-white border-[--border-color] rounded mb-3">
+                <div className="bg-gray-100 dark:bg-gray-800 border-b border-[--border-color] p-3">
+                  <b>
+                    Click or scan QR code to continue
+                    {/* {props.activeUser
+                      ? _t("onboard.title-active-user")
+                      : _t("onboard.title-visitor")} */}
+                  </b>
+                </div>
+                <Link to={`/onboard-friend/asking/${urlHash}`}>
+                  <QRCode
+                    size={256}
+                    style={{
+                      height: "auto",
+                      maxWidth: "100%",
+                      width: "100%"
+                    }}
+                    value={`${window.origin}/onboard-friend/${urlHash}`}
+                    viewBox={`0 0 256 256`}
+                  />
+                </Link>
+                <div className="bg-gray-100 dark:bg-gray-800 border-t border-[--border-color] py-2 px-3">
+                  Scan with hive keychain mobile app
+                  {/* <Link to={`/onboard-friend/asking/${urlHash}`}>
+                    <Button className="w-full">
+                      {props.activeUser ? _t("onboard.creating") : _t("onboard.asking")}
+                    </Button>
+                  </Link> */}
+                </div>
+              </div>
             )}
+
+            {/* {stage === Stage.REGISTER_TYPE && <Link to={`/onboard-friend/asking/${urlHash}`}>
+                    <QRCode
+                      size={256}
+                      style={{
+                        height: "auto",
+                        maxWidth: "100%",
+                        width: "100%",
+                      }}
+                      value={`${window.origin}/onboard-friend/${urlHash}`}
+                      viewBox={`0 0 256 256`}
+                    />
+                  </Link>} */}
+
+            {/* {stage === Stage.REGISTER_TYPE && <OnboardUser
+            newUserKeys={newUserKeys}
+            // step={stage} 
+            isDownloaded={isDownloaded}
+            activeUser={props!.activeUser?.data}
+            global={global}
+            downloadKeys={downloadKeys}
+            formatString={formatString}
+            // // history={history}
+            urlHash={urlHash}
+            accountPassword={accountPassword}
+            username={username}
+            />} */}
 
             {stage === Stage.BUY_ACCOUNT ? (
               <div className="flex items-center flex-col justify-center">
