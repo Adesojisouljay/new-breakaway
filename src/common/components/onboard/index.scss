@@ -1,0 +1,46 @@
+.onboard-wrapper{
+    display: flex;
+    justify-content: center;
+    // flex-direction: column;
+    // align-items: center;
+    background-color: #ff0000;
+    width: 100%;
+    height: 100vh;
+
+    .onboard-info{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        // justify-content: center;
+        background-color: black;
+
+        .keychain-ext{
+            display: flex;
+            flex-direction: column;
+            // background-color: blue;
+
+            .keychain-ul{
+                display: flex;
+                gap: 10px;
+            }
+        }
+
+        .account-step1{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .account-step2{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .account-step3{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    }
+}
