@@ -25,6 +25,7 @@ import DetectBottom from "../components/detect-bottom";
 import capitalize from "../util/capitalize";
 import { Account } from "../store/accounts/types";
 import { CommunityMenu } from "../components/community-menu";
+import ObcCommunityMenu from "../components/community-menu/ObcCommunityMenu";
 import { CommunityCover } from "../components/community-cover";
 import { NotFound } from "../components/404";
 import NavBar from "../components/navbar";
@@ -293,7 +294,12 @@ export const CommunityPage = (props: Props) => {
           <meta itemProp="url" content={`${defaults.base}${getMetaProps().url}`} />
         </span>
         <div className="content-side">
-          <CommunityMenu {...props} community={community} />
+          {/* <CommunityMenu {...props} community={community} /> */}
+          {props.global.hive_id === "hive-125568" ? (
+            <ObcCommunityMenu {...props} community={community} />
+          ) : (
+            <CommunityMenu {...props} community={community} />
+          )}
           <CommunityCover {...props} account={account!!} community={community} />
 
           {(() => {
@@ -360,6 +366,7 @@ export const CommunityPage = (props: Props) => {
                         )}
                       >
                         {loading && entryList.length === 0 && <EntryListLoadingItem />}
+
                         <EntryListContent
                           {...props}
                           entries={entryList}

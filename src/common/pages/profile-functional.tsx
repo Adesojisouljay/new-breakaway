@@ -597,11 +597,11 @@ export const Profile = (props: Props) => {
                           {loading && entryList.length === 0 && <EntryListLoadingItem />}
                           {EntryListContent({
                             ...props,
-                            pinEntry,
+                            // pinEntry,
                             entries: entryList,
                             promotedEntries: [],
-                            loading: isLoading,
-                            account
+                            loading: isLoading
+                            // account
                           })}
                         </div>
                       </div>

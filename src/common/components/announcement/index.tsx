@@ -186,7 +186,7 @@ const Announcement = ({ activeUser }: Props) => {
                     <p>{x?.description}</p>
                   </div>
                   <div className="flex actions">
-                    <Link to={x?.button_link} onClick={dismissClick}>
+                    <Link to={x!?.button_link} onClick={dismissClick}>
                       <Button>{x?.button_text}</Button>
                     </Link>
                     <Button onClick={laterClick} appearance="primary" outline={true}>
