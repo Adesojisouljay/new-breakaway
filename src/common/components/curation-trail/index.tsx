@@ -129,8 +129,8 @@ const CurationTrail = (props: Props) => {
         ...props,
         entries: dataTrail.entries as Entry[],
         promotedEntries: [],
-        loading,
-        account: props.account
+        loading
+        // account: props.account
       })}
       {loading && (
         <>

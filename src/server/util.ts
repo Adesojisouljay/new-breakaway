@@ -38,3 +38,6 @@ export const authCheck = (req: any, res: any, next: any) => {
     res.json({ error: "Define HIVESIGNER_SECRET ENV variable or set USE_PRIVATE=1" });
   }
 };
+
+export const getBlacklist = () =>
+  axios.get("https://spaminator.me/api/bl/all.txt").then(({ data }) => data.split(/\r?\n/));

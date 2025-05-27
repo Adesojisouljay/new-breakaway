@@ -23,7 +23,7 @@ import { findRcAccounts, rcPower } from "../../api/hive";
 
 import { _t } from "../../i18n";
 
-import { calendarRangeSvg, earthSvg, nearMeSvg, rssSvg } from "../../img/svg";
+import { calendarRangeSvg, copyContent, earthSvg, nearMeSvg, rssSvg } from "../../img/svg";
 
 import { EditPic } from "../community-card";
 import { getRelationshipBetweenAccounts, getSubscriptions } from "../../api/bridge";
@@ -36,12 +36,14 @@ import "./_index.scss";
 import { Button } from "@ui/button";
 import JoinCommunityChatBtn from "../../features/chats/components/join-community-chat-btn";
 import { useCommunityCache } from "../../core";
+import { getBtcWalletBalance, getUserByUsername } from "../../api/breakaway";
+import { success } from "../feedback";
 
 interface Props {
   global: Global;
   history: History;
   activeUser: ActiveUser | null;
-  account: Account;
+  account: Account | any;
   section?: string;
   addAccount: (data: Account) => void;
   updateActiveUser: (data?: Account) => void;
@@ -55,6 +57,9 @@ export const ProfileCard = (props: Props) => {
   const [followsActiveUserLoading, setFollowsActiveUserLoading] = useState(false);
   const [subs, setSubs] = useState([] as Subscription[]);
   const [rcPercent, setRcPercent] = useState(100);
+  const [jsonMetaData, setJsonMetaData] = useState<any>(null);
+  const [btcBalance, setBtcBalance] = useState<any>(0.0);
+  const [loading, setLoading] = useState(false);
 
   const [, updateState] = useState();
   const forceUpdate = useCallback(() => updateState({} as any), []);
@@ -101,6 +106,23 @@ export const ProfileCard = (props: Props) => {
     isMounted && getFollowsInfo(account?.name);
   }, [account?.name]);
 
+  useEffect(() => {
+    console.log("account", account);
+    const getMetaData = () => {
+      try {
+        const metaData = JSON.parse(account!?.posting_json_metadata);
+        setJsonMetaData(metaData);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    getMetaData();
+  }, [account]);
+
+  useEffect(() => {
+    getBtcBal();
+  }, [account]);
+
   const getFollowsInfo = (username: string) => {
     if (activeUser) {
       getRelationshipBetweenAccounts(username, activeUser.username)
@@ -121,6 +143,39 @@ export const ProfileCard = (props: Props) => {
 
   const toggleFollowing = () => {
     setFollowingList(!followingList);
+  };
+
+  const getBtcBal = async () => {
+    setLoading(true);
+
+    try {
+      if (account) {
+        const baUser = await getUserByUsername(account!?.name);
+
+        if (baUser?.bacUser?.bitcoinAddress) {
+          const btcAddress = baUser?.bacUser?.bitcoinAddress;
+          const addressBalance = await getBtcWalletBalance(btcAddress);
+          setBtcBalance(addressBalance?.balance);
+        }
+        setLoading(false);
+      }
+    } catch (error) {
+      setLoading(false);
+      console.log(error);
+    }
+  };
+
+  const formatString = (str: string) =>
+    str?.length <= 20 ? str : str?.slice(0, 5) + "..." + str?.slice(-10);
+
+  const copyToClipboard = (text: string) => {
+    const textField = document.createElement("textarea");
+    textField.innerText = text;
+    document.body.appendChild(textField);
+    textField.select();
+    document.execCommand("copy");
+    textField.remove();
+    success("Copied to clipboard");
   };
   const loggedIn = activeUser && activeUser.username;
   // TODO: use better conditions throughout app than .__loaded, remove all instances that rely on .__loaded
@@ -189,6 +244,84 @@ export const ProfileCard = (props: Props) => {
       <div>
         <ResourceCreditsInfo {...props} rcPercent={rcPercent} account={account} />
       </div>
+
+      {((global?.communityTitle === "Bitcoin Machines" && global?.hive_id === "hive-159314") ||
+        global?.hive_id === "hive-125568") &&
+        (jsonMetaData?.bitcoin ? (
+          <div className="btc-profile">
+            <h5>BTC info</h5>
+            <div className="btc-info">
+              <span>Address:</span>
+              <span
+                className="b-info"
+                onClick={() => copyToClipboard(jsonMetaData?.bitcoin.address)}
+              >
+                {formatString(jsonMetaData?.bitcoin?.address)}
+                {copyContent}
+              </span>
+            </div>
+            <div className="btc-info">
+              {global.hive_id === "hive-159314" && jsonMetaData?.bitcoin?.ordinalAddress && (
+                <>
+                  <span>Ordinals:</span>
+                  <span
+                    className="b-info"
+                    onClick={() => copyToClipboard(jsonMetaData?.bitcoin?.ordinalAddress)}
+                  >
+                    {formatString(jsonMetaData?.bitcoin?.ordinalAddress)}
+                    {copyContent}
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="btc-info">
+              <span>Btc Balance:</span>
+              <span className="b-info">
+                {loading ? "fetching balance..." : btcBalance?.toFixed(7)}
+              </span>
+            </div>
+            <div className="btc-info">
+              <span>Message:</span>
+              <span
+                className="b-info"
+                onClick={() => copyToClipboard(jsonMetaData?.bitcoin?.message)}
+              >
+                {jsonMetaData?.bitcoin?.message}
+                {copyContent}
+              </span>
+            </div>
+            <div className="btc-info">
+              <span>Signature:</span>
+              <span
+                className="b-info"
+                onClick={() => copyToClipboard(jsonMetaData?.bitcoin?.signature)}
+              >
+                {formatString(jsonMetaData?.bitcoin?.signature)}
+                {copyContent}
+              </span>
+              <a
+                href="https://www.verifybitcoinmessage.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Click to Verify signature
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="btc-profile">
+            <span style={{ fontSize: "18px" }}>No bitcoin profile added</span>
+            {activeUser?.username === account?.name && (
+              <a
+                href="https://onboard.bitcoinmachines.community/add-btc-profile"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Click to add bitcoin profile
+              </a>
+            )}
+          </div>
+        ))}
 
       {account.__loaded && (
         <div className="stats">
