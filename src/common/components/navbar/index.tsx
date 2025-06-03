@@ -131,6 +131,7 @@ export function Navbar({ match, history, setStepOne, setStepTwo, step }: Props) 
         logoHref={logoHref}
         logo={logo}
         history={history}
+        global={global}
       />
       <NavbarDesktop
         transparentVerify={transparentVerify}
@@ -140,6 +141,7 @@ export function Navbar({ match, history, setStepOne, setStepTwo, step }: Props) 
         setStepOne={setStepOne}
         history={history}
         setSmVisible={setSmVisible}
+        global={global}
       />
       {ui.login && <Login history={history} />}
       {global.usePrivate && <NotificationHandler />}

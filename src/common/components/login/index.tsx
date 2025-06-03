@@ -15,7 +15,7 @@ import UserAvatar from "../user-avatar";
 import Tooltip from "../tooltip";
 import PopoverConfirm from "@ui/popover-confirm";
 import OrDivider from "../or-divider";
-import { error } from "../feedback";
+import { error, success } from "../feedback";
 import { getAuthUrl, makeHsCode } from "../../helper/hive-signer";
 import { generateKeys } from "../../helper/generate-private-keys";
 import { getAccount } from "../../api/hive";
@@ -37,6 +37,8 @@ import { Spinner } from "@ui/spinner";
 import { FormControl } from "@ui/input";
 import { Button } from "@ui/button";
 import { Form } from "@ui/form";
+import { getUserByUsername, processLogin } from "../../api/breakaway";
+import { getCommunity } from "../../api/bridge";
 
 declare var window: AppWindow;
 
@@ -53,12 +55,26 @@ interface LoginKcProps {
 interface LoginKcState {
   username: string;
   inProgress: boolean;
+  community: string | any;
 }
 
 export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
   state: LoginKcState = {
     username: "",
-    inProgress: false
+    inProgress: false,
+    community: ""
+  };
+
+  componentDidMount(): void {
+    this.getCurrentCommunity();
+  }
+
+  getCurrentCommunity = async () => {
+    const communityId = this.props.global.hive_id;
+    const community = await getCommunity(communityId);
+    if (community) {
+      this.setState({ community });
+    }
   };
 
   usernameChanged = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -79,7 +95,7 @@ export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
 
   login = async () => {
     const { hsClientId } = this.props.global;
-    const { username } = this.state;
+    const { username, community } = this.state;
     if (!username) {
       return;
     }
@@ -87,6 +103,15 @@ export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
     let account: Account;
 
     this.stateSet({ inProgress: true });
+
+    const baUser = await getUserByUsername(username);
+
+    if (this.props.global.hive_id === "hive-159314" && !baUser?.bacUser?.ownsBTCMachine) {
+      error("Sorry, you have no bitcoin machine");
+      return;
+    } else {
+      success("Access granted...");
+    }
 
     try {
       account = await getAccount(username);
@@ -121,8 +146,23 @@ export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
 
     this.stateSet({ inProgress: true });
 
-    const signer = (message: string): Promise<string> =>
-      signBuffer(username, message, "Posting").then((r) => r.result);
+    // const signer = (message: string): Promise<string> =>
+    //   signBuffer(username, message, "Posting").then((r) => r.result);
+
+    const signer = async (message: string): Promise<string> => {
+      const ts: any = Date.now();
+      const sign = await signBuffer(username, message, "Posting").then((r) => r.result);
+      const signBa = await signBuffer(username, `${username}${ts}`, "Posting").then(
+        (r) => r.result
+      );
+      if (sign) {
+        // Should login to community dynamically
+        const login = await processLogin(username, ts, signBa, community.title);
+        const baToken = login?.data?.response?.token;
+        ls.set("ba_access_token", baToken);
+      }
+      return sign;
+    };
 
     let code: string;
     try {
@@ -274,6 +314,7 @@ interface State {
   key: string;
   inProgress: boolean;
   isVerified: boolean;
+  community: string | any;
 }
 
 export class Login extends BaseComponent<LoginProps, State> {
@@ -281,7 +322,8 @@ export class Login extends BaseComponent<LoginProps, State> {
     username: "",
     key: "",
     inProgress: false,
-    isVerified: false
+    isVerified: false,
+    community: ""
   };
 
   shouldComponentUpdate(nextProps: Readonly<LoginProps>, nextState: Readonly<State>): boolean {
@@ -291,6 +333,18 @@ export class Login extends BaseComponent<LoginProps, State> {
       !isEqual(this.state, nextState)
     );
   }
+
+  componentDidMount(): void {
+    this.getCurrentCommunity();
+  }
+
+  getCurrentCommunity = async () => {
+    const communityId = this.props.global.hive_id;
+    const community = await getCommunity(communityId);
+    if (community) {
+      this.setState({ community });
+    }
+  };
 
   hide = () => {
     const { toggleUIProp } = this.props;
@@ -644,7 +698,7 @@ export class Login extends BaseComponent<LoginProps, State> {
           </Button>
         </Form>
         <OrDivider />
-        <div className="hs-login">
+        {/* <div className="hs-login">
           <Button
             outline={true}
             onClick={this.hsLogin}
@@ -653,8 +707,8 @@ export class Login extends BaseComponent<LoginProps, State> {
             iconPlacement="left"
           >
             {_t("login.with-hive-signer")}
-          </Button>
-        </div>
+          </Button> */}
+        {/* </div> */}
         {global.hasKeyChain && (
           <div className="kc-login">
             <Button
