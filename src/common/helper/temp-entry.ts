@@ -24,6 +24,10 @@ export default (p: TempEntryProps): Entry => {
   const now = moment(Date.now());
   const payout = moment(Date.now()).add(7, "days");
 
+  const data: any = (window as any).comTag;
+
+  const communityName: any = Object.values(data)[0];
+
   const category = p.tags[0];
 
   return {
@@ -41,7 +45,7 @@ export default (p: TempEntryProps): Entry => {
     depth: 0,
     is_paidout: false,
     json_metadata: p.jsonMeta ?? {
-      app: `ecency/${version}-vision`,
+      app: `${communityName.replace(/\s+/g, "")}-BAC`,
       format: "markdown+html",
       tags: p.tags,
       description: p.description

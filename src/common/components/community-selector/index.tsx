@@ -232,7 +232,7 @@ export class CommunitySelector extends BaseComponent<Props, State> {
       content = (
         <>
           <UserAvatar username={community.name} size="small" />
-          <span className="label">{community.title}</span> {menuDownSvg}
+          <span className="label">{community.title}</span>
         </>
       );
     } else {
@@ -240,13 +240,13 @@ export class CommunitySelector extends BaseComponent<Props, State> {
         content = (
           <>
             <UserAvatar username={activeUser.username} size="small" />
-            <span className="label">{_t("community-selector.my-blog")}</span> {menuDownSvg}
+            <span className="label">{_t("community-selector.my-blog")}</span>
           </>
         );
       } else {
         content = (
           <>
-            <span className="label">{_t("community-selector.choose")}</span> {menuDownSvg}
+            <span className="label">{_t("community-selector.choose")}</span>
           </>
         );
       }
@@ -266,7 +266,7 @@ export class CommunitySelector extends BaseComponent<Props, State> {
           {content}
         </a>
 
-        {visible && (
+        {/* {visible && (
           <Modal
             onHide={this.toggle}
             show={true}
@@ -288,7 +288,7 @@ export class CommunitySelector extends BaseComponent<Props, State> {
               />
             </ModalBody>
           </Modal>
-        )}
+        )} */}
       </>
     );
   }

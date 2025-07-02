@@ -1,7 +1,7 @@
 import moment from "moment";
 
 export const dateToRelative = (d: string): string => {
-  const isTimeZoned = d.indexOf(".") !== -1 || d.indexOf("+") !== -1 ? d : `${d}.000Z`;
+  const isTimeZoned = d?.indexOf(".") !== -1 || d?.indexOf("+") !== -1 ? d : `${d}.000Z`;
   const dm = moment(new Date(isTimeZoned));
   const dd = dm.fromNow(true);
   return dd
@@ -20,19 +20,19 @@ export const dateToRelative = (d: string): string => {
 };
 
 export const dateToFullRelative = (d: string): string => {
-  const isTimeZoned = d.indexOf(".") !== -1 || d.indexOf("+") !== -1 ? d : `${d}.000Z`;
+  const isTimeZoned = d?.indexOf(".") !== -1 || d?.indexOf("+") !== -1 ? d : `${d}.000Z`;
   const dm = moment(new Date(isTimeZoned));
   return dm.fromNow();
 };
 
 export const dateToFormatted = (d: string, format: string = "LLLL"): string => {
-  const isTimeZoned = d.indexOf(".") !== -1 || d.indexOf("+") !== -1 ? d : `${d}.000Z`;
+  const isTimeZoned = d?.indexOf(".") !== -1 || d?.indexOf("+") !== -1 ? d : `${d}.000Z`;
   const dm = moment(new Date(isTimeZoned));
   return dm.format(format);
 };
 
 export const dayDiff = (d: string) => {
-  const isTimeZoned = d.indexOf(".") !== -1 || d.indexOf("+") !== -1 ? d : `${d}.000Z`;
+  const isTimeZoned = d?.indexOf(".") !== -1 || d?.indexOf("+") !== -1 ? d : `${d}.000Z`;
   const _MS_PER_DAY = 1000 * 60 * 60 * 24;
   const a = new Date(isTimeZoned);
   const b = new Date();
@@ -44,14 +44,14 @@ export const dayDiff = (d: string) => {
 };
 
 export const hourDiff = (d: string) => {
-  const isTimeZoned = d.indexOf(".") !== -1 || d.indexOf("+") !== -1 ? d : `${d}.000Z`;
+  const isTimeZoned = d?.indexOf(".") !== -1 || d?.indexOf("+") !== -1 ? d : `${d}.000Z`;
   let diff = (new Date().getTime() - new Date(isTimeZoned).getTime()) / 1000;
   diff /= 60 * 60;
   return Math.abs(Math.round(diff));
 };
 
 export const secondDiff = (d: string) => {
-  const isTimeZoned = d.indexOf(".") !== -1 || d.indexOf("+") !== -1 ? d : `${d}.000Z`;
+  const isTimeZoned = d?.indexOf(".") !== -1 || d?.indexOf("+") !== -1 ? d : `${d}.000Z`;
   let diff = (new Date().getTime() - new Date(isTimeZoned).getTime()) / 1000;
   return Math.abs(Math.round(diff));
 };

@@ -17,6 +17,9 @@ import { Location } from "history";
 import "./_index.scss";
 import { Spinner } from "@ui/spinner";
 import { Button } from "@ui/button";
+import { getUserByUsername, updateUserPoints } from "../../api/breakaway";
+import { error } from "../feedback";
+import { getCommunity } from "../../api/bridge";
 
 setProxyBase(defaults.imageServer);
 
@@ -80,6 +83,7 @@ interface State {
   showEmoji: boolean;
   showGif: boolean;
   inputHeight: number;
+  communityData: any;
 }
 
 export class Comment extends Component<Props, State> {
@@ -89,7 +93,8 @@ export class Comment extends Component<Props, State> {
     preview: "",
     showEmoji: false,
     showGif: false,
-    inputHeight: 0
+    inputHeight: 0,
+    communityData: {}
   };
   timer: any = null;
   _updateTimer: any = null;
@@ -104,6 +109,7 @@ export class Comment extends Component<Props, State> {
     this.setState({ text: defText || "", preview: defText || "" });
 
     this.addToolbarEventListners();
+    this.getCommunityInfo();
   }
 
   componentDidUpdate(prevProps: Readonly<Props>): void {
@@ -155,10 +161,33 @@ export class Comment extends Component<Props, State> {
   };
 
   submit = async () => {
-    const { text } = this.state;
-    const { onSubmit } = this.props;
-    await onSubmit(text);
-    this.setState({ text: "" });
+    const { text, communityData } = this.state;
+    const { onSubmit, activeUser } = this.props;
+    const baUser = await getUserByUsername(activeUser!.username);
+
+    try {
+      // return
+      //Check if user has btc
+      if (
+        this.props.global.hive_id === "hive-125568" ||
+        this.props.global.hive_id === "hive-159314"
+      ) {
+        console.log("baUserthis.props.global.hive_id", this.props.global.hive_id);
+
+        let btcAddress;
+
+        if (baUser?.bacUser?.bitcoinAddress) {
+          btcAddress = baUser?.bacUser?.bitcoinAddress;
+        } else {
+          error("Sorry, you have no bitcoin profile");
+          return;
+        }
+      }
+      await onSubmit(text);
+      this.setState({ text: "" });
+
+      const res = await updateUserPoints(activeUser!.username, communityData.title, "comments");
+    } catch (error) {}
   };
 
   cancel = () => {
@@ -223,6 +252,11 @@ export class Comment extends Component<Props, State> {
     if (e.altKey && e.key === "m") {
       detectEvent("blockquote");
     }
+  };
+
+  getCommunityInfo = async () => {
+    const communityData = await getCommunity(this.props.global.hive_id);
+    this.setState({ communityData });
   };
 
   render() {
