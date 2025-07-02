@@ -1,6 +1,8 @@
 import getSlug from "speakingurl";
 
 import { BeneficiaryRoute, CommentOptions, MetaData, RewardType } from "../api/operations";
+import global from "../store/global";
+import { AppState } from "../store";
 
 const permlinkRnd = () => (Math.random() + 1).toString(16).substring(2);
 
@@ -60,7 +62,20 @@ export const extractMetaData = (body: string): MetaData => {
   return out;
 };
 
-export const makeApp = (appVer: string) => `ecency/${appVer}-vision`;
+////Needs to be visited
+// export const makeApp = (appVer: string) => `ecency/${appVer}-vision`;
+// export const makeApp = (appVer: string) => `${(Object.values((window as any)?.comTag)[0] as any).replace(/\s+/g, '')}-BAC`;
+export const makeApp = (appVer: string) => {
+  // console.log("........window,........", window)
+
+  // let tag;
+  // if (typeof window !== "undefined" && (window as any)?.comTag) {
+  //    tag = Object.values((window as any)?.comTag)[0] as string;
+  //    console.log(tag)
+  //   return `${tag?.replace(/\s+/g, '')}-BAC`;
+  // }
+  return "Breakaway-Community";
+};
 
 export const makeJsonMetaDataReply = (tags: string[], appVer: string) => ({
   tags,

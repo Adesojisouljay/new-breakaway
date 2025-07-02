@@ -19,22 +19,23 @@ interface Props {
 export default class WalletMenu extends Component<Props> {
   render() {
     const { global, username, active } = this.props;
+    console.log("......global.......", global);
     const logo = require("../../img/logo-small-transparent.png");
 
     return (
       <div className="wallet-menu">
-        {global.usePrivate && (
-          <Link
-            className={_c(`menu-item ecency ${active === "ecency" ? "active" : ""}`)}
-            to={`/@${username}/points`}
-          >
-            <span className="title">Ecency</span>
-            <span className="sub-title">Points</span>
-            <span className="platform-logo">
-              <img alt="ecency" src={logo} />
-            </span>
-          </Link>
-        )}
+        {/* {global.usePrivate && ( */}
+        <Link
+          className={_c(`menu-item ecency ${active === "ecency" ? "active" : ""}`)}
+          to={`/@${username}/points`}
+        >
+          <span className="title">{global.communityTitle}</span>
+          <span className="sub-title">Points</span>
+          <span className="platform-logo">
+            {/* <img alt="logo" src={`https://images.hive.blog/u/${global.hive_id}/avatar`} /> */}
+          </span>
+        </Link>
+        {/* // )} */}
         <Link
           className={_c(`menu-item hive ${active === "hive" ? "active" : ""}`)}
           to={`/@${username}/wallet`}

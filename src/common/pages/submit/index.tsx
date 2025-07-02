@@ -70,6 +70,7 @@ import { IntroStep } from "@ui/core";
 import { dotsMenuIconSvg } from "../../features/decks/icons";
 import { PollsContext, PollsManager } from "./hooks/polls-manager";
 import { useEntryPollExtractor } from "../entry/utils";
+import { Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "@ui/modal";
 
 interface MatchProps {
   match: MatchType;
@@ -103,11 +104,14 @@ export function Submit(props: PageProps & MatchProps) {
   const [showHelp, setShowHelp] = useState(false);
   const [isDraftEmpty, setIsDraftEmpty] = useState(false);
   const [forceReactivateTour, setForceReactivateTour] = useState(false);
+  const [showBtcBenInfo, setShowBtcBenInfo] = useState(false);
 
   // Misc
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [editingDraft, setEditingDraft] = useState<Draft | null>(null);
   const [isTourFinished] = useLocalStorage(PREFIX + `_itf_submit`, false);
+
+  const [btcPercentage, setBtcPercentage] = useState(0);
 
   const postPoll = useEntryPollExtractor(editingEntry);
 
@@ -305,6 +309,30 @@ export function Submit(props: PageProps & MatchProps) {
     threeSpeakManager.checkBodyForVideos(body);
   }, [body]);
 
+  useEffect(() => {
+    if (props.global.hive_id === "hive-125568") {
+      const btcBen = {
+        account: "btc4content",
+        weight: btcPercentage || 3000
+      };
+
+      const alreadyAddedIndex = beneficiaries.findIndex((ben) => ben.account === btcBen.account);
+
+      if (alreadyAddedIndex === -1) {
+        // Not in the list,we add it
+        const b = [...beneficiaries, btcBen].sort((a, b) => (a.account < b.account ? -1 : 1));
+        setBeneficiaries(b);
+      } else {
+        // In the list,we update its weight if different
+        const updated = [...beneficiaries];
+        if (updated[alreadyAddedIndex].weight !== btcBen.weight) {
+          updated[alreadyAddedIndex] = btcBen;
+          setBeneficiaries(updated.sort((a, b) => (a.account < b.account ? -1 : 1)));
+        }
+      }
+    }
+  }, [btcPercentage]);
+
   const updatePreview = (): void => {
     if (_updateTimer) {
       clearTimeout(_updateTimer);
@@ -454,6 +482,24 @@ export function Submit(props: PageProps & MatchProps) {
         enabled={tourEnabled}
       />
 
+      <Modal
+        onHide={() => setShowBtcBenInfo(false)}
+        show={showBtcBenInfo}
+        centered={true}
+        animation={false}
+        className="beneficiary-editor-dialog"
+      >
+        <ModalHeader closeButton={true}>
+          <ModalTitle>Btc Beneficiary</ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          <div>
+            <p>Changing the beneficiary amount affects your reward in sats</p>
+            <p>To change/edit beneficiary amount, go to advanced section.</p>
+          </div>
+        </ModalBody>
+      </Modal>
+
       <div className={_c(`app-content submit-page ${editingEntry !== null ? "editing" : ""}`)}>
         <div className="editor-panel">
           {editingEntry === null && activeUser && (
@@ -470,6 +516,13 @@ export function Submit(props: PageProps & MatchProps) {
                   tagsChanged(newTags);
                 }}
               />
+
+              {props.global.hive_id === "hive-125568" && (
+                <span className="btc-ben">
+                  (30% beneficiary set to @btc4content by default){" "}
+                  <Button onClick={() => setShowBtcBenInfo(true)}>Learn more</Button>
+                </span>
+              )}
 
               <div className="flex justify-end w-full items-center gap-4">
                 <Button
@@ -764,12 +817,16 @@ export function Submit(props: PageProps & MatchProps) {
                           <div className="col-span-12 sm:col-span-9">
                             <BeneficiaryEditorDialog
                               body={body}
+                              setBtcPercentage={setBtcPercentage}
                               author={activeUser?.username}
                               list={beneficiaries}
+                              global={props.global}
                               onAdd={(item) => {
+                                console.log(item);
                                 const b = [...beneficiaries, item].sort((a, b) =>
                                   a.account < b.account ? -1 : 1
                                 );
+                                console.log(b);
                                 setBeneficiaries(b);
                               }}
                               onDelete={(username) => {

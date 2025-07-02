@@ -3,7 +3,7 @@ import { error } from "../feedback";
 import { BeneficiaryRoute } from "../../api/operations";
 import { getAccount } from "../../api/hive";
 import { _t } from "../../i18n";
-import { accountMultipleSvg, deleteForeverSvg, plusSvg } from "../../img/svg";
+import { accountMultipleSvg, deleteForeverSvg, plusSvg, pencilOutlineSvg } from "../../img/svg";
 import { handleInvalid, handleOnInput } from "../../util/input-util";
 import "./_index.scss";
 import { useThreeSpeakManager } from "../../pages/submit/hooks";
@@ -19,9 +19,19 @@ interface Props {
   list: BeneficiaryRoute[];
   onAdd: (item: BeneficiaryRoute) => void;
   onDelete: (username: string) => void;
+  global: any;
+  setBtcPercentage: any;
 }
 
-export function BeneficiaryEditorDialog({ list, author, onDelete, body, onAdd }: Props) {
+export function BeneficiaryEditorDialog({
+  list,
+  author,
+  onDelete,
+  body,
+  onAdd,
+  global,
+  setBtcPercentage
+}: Props) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const { videos } = useThreeSpeakManager();
 
@@ -29,8 +39,11 @@ export function BeneficiaryEditorDialog({ list, author, onDelete, body, onAdd }:
   const [username, setUsername] = useState("");
   const [percentage, setPercentage] = useState("");
   const [inProgress, setInProgress] = useState(false);
+  // const [editAccount, setEditAccount] = useState<string | null>(null);
+  const [editPercentage, setEditPercentage] = useState<string | any>(0);
+  const [isEditingPerc, setisEditingPerc] = useState(false);
 
-  const used = useMemo(() => list.reduce((a, b) => a + b.weight / 100, 0), [list]);
+  const used = useMemo(() => list?.reduce((a, b) => a + b.weight / 100, 0), [list]);
 
   return (
     <>
@@ -151,7 +164,8 @@ export function BeneficiaryEditorDialog({ list, author, onDelete, body, onAdd }:
                         />
                       </Td>
                     </Tr>
-                    {list.map((x) => {
+
+                    {/* {list.map((x) => {
                       return (
                         <Tr key={x.account}>
                           <Td>{`@${x.account}`}</Td>
@@ -161,6 +175,8 @@ export function BeneficiaryEditorDialog({ list, author, onDelete, body, onAdd }:
                               <></>
                             ) : (
                               <Button
+                              disabled={global.hive_id === "hive-125568" && x.account=== "btc4content"}
+                              style={{cursor: (global.hive_id === "hive-125568" && x.account=== "btc4content") ? "not-allowed" : "pointer"}}
                                 onClick={() => {
                                   onDelete(x.account);
                                 }}
@@ -169,6 +185,97 @@ export function BeneficiaryEditorDialog({ list, author, onDelete, body, onAdd }:
                                 icon={deleteForeverSvg}
                               />
                             )}
+                          </Td>
+                        </Tr>
+                      );
+                    })} */}
+                    {list.map((x) => {
+                      // const isEditing = editAccount === x.account;
+
+                      return (
+                        <Tr key={x.account}>
+                          <Td>{`@${x.account}`}</Td>
+                          <Td>
+                            {x.account === "btc4content" && isEditingPerc ? (
+                              <InputGroup append="%">
+                                <FormControl
+                                  type="number"
+                                  min={1}
+                                  max={100 - used + x.weight / 100} // add back current weight to avoid blocking update
+                                  step={1}
+                                  value={editPercentage}
+                                  onChange={(e) => setEditPercentage(e.target.value)}
+                                />
+                              </InputGroup>
+                            ) : (
+                              `${x.weight / 100}%`
+                            )}
+                          </Td>
+                          <Td>
+                            {Object.values(videos).length > 0 && x.src === "ENCODER_PAY" ? (
+                              <></>
+                            ) : (
+                              x.account === "btc4content" &&
+                              (isEditingPerc ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setBtcPercentage(Number(editPercentage) * 100);
+                                      setisEditingPerc(false);
+                                    }}
+                                    appearance="primary"
+                                    // icon={plusSvg}
+                                  >
+                                    Apply
+                                  </Button>
+                                  {/* <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    // setEditAccount(null);
+                                    setEditPercentage("");
+                                  }}
+                                  appearance="danger"
+                                  icon={deleteForeverSvg}
+                                /> */}
+                                </>
+                              ) : (
+                                <>
+                                  {/* {pencilOutlineSvg} */}
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setisEditingPerc(true);
+                                      console.log(isEditingPerc);
+                                      // setEditAccount(x.account);
+                                      setEditPercentage(String(x.weight / 100));
+                                    }}
+                                    appearance="primary"
+                                    // icon={plusSvg}
+                                  >
+                                    Edit
+                                  </Button>
+                                  {/* // } */}
+                                </>
+                              ))
+                            )}
+                          </Td>
+                          <Td>
+                            <Button
+                              // disabled={
+                              //   global.hive_id === "hive-125568" && x.account === "btc4content"
+                              // }
+                              // style={{
+                              //   cursor:
+                              //     global.hive_id === "hive-125568" && x.account === "btc4content"
+                              //       ? "not-allowed"
+                              //       : "pointer"
+                              // }}
+                              onClick={() => onDelete(x.account)}
+                              appearance="danger"
+                              size="sm"
+                              icon={deleteForeverSvg}
+                            />
                           </Td>
                         </Tr>
                       );
