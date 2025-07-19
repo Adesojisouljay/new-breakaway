@@ -19,7 +19,6 @@ interface Props {
 export default class WalletMenu extends Component<Props> {
   render() {
     const { global, username, active } = this.props;
-    console.log("......global.......", global);
     const logo = require("../../img/logo-small-transparent.png");
 
     return (

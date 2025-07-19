@@ -16,6 +16,7 @@ import _c from "../../util/fix-class-names";
 import { repeatSvg } from "../../img/svg";
 import "./_index.scss";
 import { useMappedStore } from "../../store/use-mapped-store";
+import { updateUserPoints } from "../../api/breakaway";
 
 interface Props {
   entry: Entry;
@@ -43,6 +44,7 @@ export class EntryReblogBtn extends BaseComponent<Props> {
 
   componentDidMount() {
     const { activeUser, reblogs, fetchReblogs } = this.props;
+
     if (activeUser && reblogs.canFetch) {
       // since @active-user/LOGIN resets reblogs reducer, wait 500 ms on first load
       // to clientStoreTasks (store/helper.ts) finish its job with logging active user in.
@@ -61,10 +63,12 @@ export class EntryReblogBtn extends BaseComponent<Props> {
   reblog = () => {
     const { entry, activeUser, addReblog } = this.props;
 
+    const communityTitle = Object?.values((window as any)?.comTag)[0] as any;
     this.stateSet({ inProgress: true });
     reblog(activeUser?.username!, entry.author, entry.permlink)
-      .then(() => {
+      .then(async () => {
         addReblog(entry.author, entry.permlink);
+        const baResponse = await updateUserPoints(activeUser!.username, communityTitle, "reblog");
         success(_t("entry-reblog.success"));
       })
       .catch((e) => {

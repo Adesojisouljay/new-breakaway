@@ -104,24 +104,25 @@ export const ProfileCard = (props: Props) => {
     setFollowingList(false);
     setFollowsActiveUserLoading(activeUser && activeUser.username ? true : false);
     isMounted && getFollowsInfo(account?.name);
-  }, [account?.name]);
+  }, [account!?.name]);
 
   useEffect(() => {
-    console.log("account", account);
     const getMetaData = () => {
       try {
-        const metaData = JSON.parse(account!?.posting_json_metadata);
-        setJsonMetaData(metaData);
+        if (account) {
+          const metaData = JSON?.parse(account!?.posting_json_metadata);
+          setJsonMetaData(metaData);
+        }
       } catch (error) {
         console.log(error);
       }
     };
     getMetaData();
-  }, [account]);
+  }, [account!]);
 
   useEffect(() => {
     getBtcBal();
-  }, [account]);
+  }, [account!]);
 
   const getFollowsInfo = (username: string) => {
     if (activeUser) {

@@ -26,8 +26,9 @@ import { EntryBodyManagement, EntryMetadataManagement } from "../../../features/
 import { Entry } from "../../../store/entries/types";
 import { GetPollDetailsQueryResponse } from "../../../features/polls/api";
 import { usePollsCreationManagement } from "../../../features/polls/hooks";
+import { updateUserPoints } from "../../../api/breakaway";
 
-export function usePublishApi(history: History, onClear: () => void) {
+export function usePublishApi(history: History, onClear: () => void, communityTitle: any) {
   const queryClient = useQueryClient();
 
   const { activeUser } = useMappedStore();
@@ -160,6 +161,9 @@ export function usePublishApi(history: History, onClear: () => void) {
         clearActivePoll();
         const newLoc = makePathEntry(parentPermlink, author, permlink);
         history.push(newLoc);
+
+        //////function to earn post point
+        await updateUserPoints(activeUser!.username, communityTitle, "posts");
 
         //Mark speak video as published
         if (!!unpublished3SpeakVideo && activeUser.username === unpublished3SpeakVideo.owner) {

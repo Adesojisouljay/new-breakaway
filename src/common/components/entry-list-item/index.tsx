@@ -30,6 +30,7 @@ import { useUnmount } from "react-use";
 import { Community } from "../../store/communities";
 import { EntryListItemThumbnail } from "./entry-list-item-thumbnail";
 import { UilPanelAdd } from "@iconscout/react-unicons";
+// import { Global } from "../../store/global/types";
 
 setProxyBase(defaults.imageServer);
 
@@ -37,6 +38,7 @@ interface Props {
   history: History;
   location: Location;
   entry: Entry;
+  // global: Global;
   community?: Community | null;
   asAuthor?: string;
   promoted?: boolean;
