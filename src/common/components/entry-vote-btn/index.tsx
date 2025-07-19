@@ -28,6 +28,7 @@ import "./_index.scss";
 import { useMappedStore } from "../../store/use-mapped-store";
 import { Button } from "@ui/button";
 import { InputVote } from "@ui/input";
+import { updateUserPoints } from "../../api/breakaway";
 
 const setVoteValue = (
   type: "up" | "down" | "downPrevious" | "upPrevious",
@@ -478,7 +479,7 @@ export class EntryVoteBtn extends BaseComponent<Props, State> {
     const username = activeUser?.username!;
 
     vote(username, entry.author, entry.permlink, weight)
-      .then(() => {
+      .then(async () => {
         const votes: EntryVote[] = [
           ...(entry.active_votes ? entry.active_votes.filter((x) => x.voter !== username) : []),
           { rshares: weight, voter: username }
@@ -487,6 +488,12 @@ export class EntryVoteBtn extends BaseComponent<Props, State> {
         afterVote(votes, estimated);
         //}
         updateActiveUser(); // refresh voting power
+
+        const baResponse = await updateUserPoints(
+          activeUser!.username,
+          this.props.global.communityTitle,
+          "upvote"
+        );
       })
       .catch((e) => {
         error(...formatError(e));

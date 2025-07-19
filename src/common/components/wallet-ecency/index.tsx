@@ -267,7 +267,7 @@ export const WalletEcency = (props: Props) => {
       );
       if (response.status === 200) {
         const userPoints = response.data.userPoints;
-        setUserPoints(userPoints[0]);
+        setUserPoints(userPoints[1]);
         return userPoints;
       } else if (response.status === 404) {
         if (response.data.error === "User not found") {
@@ -312,7 +312,6 @@ export const WalletEcency = (props: Props) => {
 
       if (response.status === 200) {
         setPointsHistory(response.data.data.pointsHistory);
-        console.log("pointsHistory....", pointsHistory);
         return response.data;
       } else {
         console.error("Error fetching points hisory:", response.data.message);

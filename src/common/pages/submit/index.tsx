@@ -247,10 +247,14 @@ export function Submit(props: PageProps & MatchProps) {
     }
   );
 
+  const communityTitle = props.global.communityTitle;
+
   const { mutateAsync: doSchedule, isLoading: posting } = useScheduleApi(() => clear());
   const { mutateAsync: saveDraft, isLoading: saving } = useSaveDraftApi(props.history);
-  const { mutateAsync: publish, isLoading: publishing } = usePublishApi(props.history, () =>
-    clear()
+  const { mutateAsync: publish, isLoading: publishing } = usePublishApi(
+    props.history,
+    () => clear(),
+    communityTitle
   );
   const { mutateAsync: update, isLoading: updating } = useUpdateApi(props.history, () => clear());
 
@@ -822,7 +826,6 @@ export function Submit(props: PageProps & MatchProps) {
                               list={beneficiaries}
                               global={props.global}
                               onAdd={(item) => {
-                                console.log(item);
                                 const b = [...beneficiaries, item].sort((a, b) =>
                                   a.account < b.account ? -1 : 1
                                 );
