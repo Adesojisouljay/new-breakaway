@@ -163,7 +163,7 @@ export function usePublishApi(history: History, onClear: () => void, communityTi
         history.push(newLoc);
 
         //////function to earn post point
-        await updateUserPoints(activeUser!.username, communityTitle, "posts");
+        // await updateUserPoints(activeUser!.username, communityTitle, "posts");
 
         //Mark speak video as published
         if (!!unpublished3SpeakVideo && activeUser.username === unpublished3SpeakVideo.owner) {

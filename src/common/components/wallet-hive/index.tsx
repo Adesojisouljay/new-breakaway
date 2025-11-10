@@ -466,7 +466,7 @@ export class WalletHive extends BaseComponent<Props, State> {
                     </Tooltip>
                   </div>
                 )}
-                {openOrders && openOrders.hive > 0 && (
+                {openOrders && (openOrders.hive as number) > 0 && (
                   <div className="amount amount-passive converting-hbd">
                     <Tooltip content={_t("wallet.reserved-amount")}>
                       <span
@@ -478,7 +478,7 @@ export class WalletHive extends BaseComponent<Props, State> {
                     </Tooltip>
                   </div>
                 )}
-                {withdrawSavings && withdrawSavings.hive > 0 && (
+                {withdrawSavings && (openOrders.hive as number) > 0 && (
                   <div className="amount amount-passive converting-hbd">
                     <Tooltip content={_t("wallet.withdrawing-amount")}>
                       <span
@@ -707,7 +707,7 @@ export class WalletHive extends BaseComponent<Props, State> {
                   </div>
                 )}
 
-                {withdrawSavings && withdrawSavings.hbd > 0 && (
+                {withdrawSavings && (withdrawSavings.hbd as number) > 0 && (
                   <div className="amount amount-passive converting-hbd">
                     <Tooltip content={_t("wallet.withdrawing-amount")}>
                       <span
@@ -720,7 +720,7 @@ export class WalletHive extends BaseComponent<Props, State> {
                   </div>
                 )}
 
-                {openOrders && openOrders.hbd > 0 && (
+                {openOrders && (openOrders.hbd as number) > 0 && (
                   <div className="amount amount-passive converting-hbd">
                     <Tooltip content={_t("wallet.reserved-amount")}>
                       <span className="amount-btn" onClick={() => this.toggleOpenOrdersList("HBD")}>
