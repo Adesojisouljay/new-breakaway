@@ -489,11 +489,11 @@ export class EntryVoteBtn extends BaseComponent<Props, State> {
         //}
         updateActiveUser(); // refresh voting power
 
-        const baResponse = await updateUserPoints(
-          activeUser!.username,
-          this.props.global.communityTitle,
-          "upvote"
-        );
+        // const baResponse = await updateUserPoints(
+        //   activeUser!.username,
+        //   this.props.global.communityTitle,
+        //   "upvote"
+        // );
       })
       .catch((e) => {
         error(...formatError(e));

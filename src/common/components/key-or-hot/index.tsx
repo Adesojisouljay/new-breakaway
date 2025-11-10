@@ -114,7 +114,7 @@ export class KeyOrHot extends Component<Props, State> {
           ) : (
             <>
               <OrDivider />
-              <div className="hs-sign">
+              {/* <div className="hs-sign">
                 <Button
                   outline={true}
                   onClick={this.hotClicked}
@@ -123,7 +123,7 @@ export class KeyOrHot extends Component<Props, State> {
                 >
                   {_t("key-or-hot.with-hivesigner")}
                 </Button>
-              </div>
+              </div> */}
 
               {global.hasKeyChain && (
                 <div className="kc-sign">

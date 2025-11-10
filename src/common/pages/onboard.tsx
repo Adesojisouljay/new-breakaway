@@ -36,6 +36,9 @@ import { Button } from "@ui/button";
 import { FormControl, InputGroup } from "@ui/input";
 import { getRcOperationStats } from "../api/hive";
 import { Alert } from "@ui/alert";
+import QRCode from "react-qr-code";
+import { getInvoice, getLightning, getAccountStatus } from "../api/breakaway";
+import OrDivider from "../components/or-divider";
 
 export interface AccountInfo {
   email: string;
@@ -106,6 +109,9 @@ const Onboard = (props: Props) => {
   const [voteAmount, setVoteAmount] = useState(0);
   const [transferAmount, setTransferAmount] = useState(0);
   const [customJsonAmount, setCustomJsonAmount] = useState(0);
+  const [invoiceData, setInvoiceData] = useState<any>(null);
+  const [status, setStatus] = useState<"checking" | "pending" | "paid" | "account_created" | "notfound">("checking");
+  const [bubbles, setBubbles] = useState<any>()
 
   useEffect(() => {
     setOnboardUrl(`${window.location.origin}/onboard-friend/creating/`);
@@ -124,6 +130,7 @@ const Onboard = (props: Props) => {
     if (props.match.params.type == "asking") {
       initAccountKey();
     }
+    console.log(accountInfo?.username)
   }, [accountInfo?.username]);
 
   useEffect(() => {
@@ -162,6 +169,33 @@ const Onboard = (props: Props) => {
       setRcAmount(0);
     }
   }, [isChecked]);
+
+  useEffect(() => {
+    console.log("...v...")
+    console.log("...v...", decodedInfo?.username, accountInfo?.username)
+    
+    if (!decodedInfo?.username) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await getAccountStatus(decodedInfo?.username);
+        console.log("res..res..res", res)
+
+          if(res.status === "pending") {
+          setStatus(res.status || "pending");
+          }
+         else if (res.status === "account_created") {
+            setStatus("account_created");
+            clearInterval(interval); // stop polling once done
+          }
+        // }
+      } catch (err) {
+        console.error("Error checking account status:", err);
+      }
+    }, 1000); // check every 5s
+
+    return () => clearInterval(interval);
+  }, [decodedInfo]);
 
   const handleResize = () => {
     setInnerWidth(window.innerWidth);
@@ -206,6 +240,8 @@ const Onboard = (props: Props) => {
         referral: formatUsername(info.referral),
         keys
       };
+
+      console.log("object...", accInfo)
       setAccountInfo(accInfo);
       setMasterPassword(masterPassword);
       return masterPassword;
@@ -217,7 +253,7 @@ const Onboard = (props: Props) => {
 
   const sendMail = async () => {
     const { activeUser } = props;
-    const username = decodedInfo!.username || accountInfo!.username;
+    const username = decodedInfo!?.username || accountInfo!?.username;
     const email = decodedInfo!.email || accountInfo!.email;
     if (activeUser) {
       await onboardEmail(formatUsername(username), formatEmail(email), activeUser?.username);
@@ -227,6 +263,36 @@ const Onboard = (props: Props) => {
   const splitUrl = (url: string) => {
     return url.slice(0, 50);
   };
+
+  const getLightningAcc = async () => {
+    try {
+
+      console.log("object...", accountInfo)
+      const invoiceData = await getInvoice(setInvoiceData, accountInfo?.username || decodedInfo!?.username)
+   
+      const data = {
+        username: decodedInfo!?.username || accountInfo?.username,
+        accountKeys: {
+          ownerPubkey: decodedInfo?.pubkeys?.ownerPublicKey || accountInfo?.keys?.ownerPubkey,
+          activePubkey: decodedInfo?.pubkeys?.activePublicKey || accountInfo?.keys?.activePubkey,
+          postingPubkey: decodedInfo?.pubkeys?.postingPublicKey || accountInfo?.keys?.postingPubkey,
+          memoPubkey: decodedInfo?.pubkeys?.memoPublicKey || accountInfo?.keys?.memoPubkey,
+        },
+        token: "HIVE",
+        payment_addr: invoiceData?.payment_addr,
+        payment_hash: invoiceData?.payment_hash,
+        payment_request: invoiceData?.payment_request,
+        r_hash: invoiceData?.r_hash,
+        v4vMemo: invoiceData?.memo,
+        satsAmount: invoiceData?.amount,
+      };
+  
+      const getAcc = await getLightning(data);
+      console.log("lightning acc created:", getAcc);
+    } catch (error) {
+      console.error("error creating lightning acc:", error);
+    }
+  };  
 
   const downloadKeys = async () => {
     if (accountInfo) {
@@ -597,204 +663,263 @@ const Onboard = (props: Props) => {
       <Feedback activeUser={props.activeUser} />
       <NavBar history={props.history} />
       {props.match.params.type === "asking" && props.match.params.secret && (
-        <div className="onboard-container">
-          <div className="asking">
-            <div
-              className={`asking-body flex mb-0 self-center flex-col ${
-                innerWidth < 577 ? "p-3" : "p-5"
-              }`}
+        status === "account_created" ? (
+          <div className="creating-confirm asking asking-body p-4 text-center">
+            <h2 className="align-self-center">✅ Account Created successfully</h2>
+            <Link
+              to={`/@${decodedInfo?.username}`}
+              className="align-self-center"
             >
-              <h3 className="mb-3 self-center text-2xl font-semibold text-blue-dark-sky">
-                {_t("onboard.confirm-details")}
-              </h3>
-              <div className="reg-details">
-                <span style={{ lineHeight: 2 }}>
-                  {_t("onboard.username")} <strong>{accountInfo?.username}</strong>
-                </span>
-                <span style={{ lineHeight: 2 }}>
-                  {_t("onboard.email")} <strong>{accountInfo?.email}</strong>
-                </span>
-                <span style={{ lineHeight: 2 }}>
-                  {_t("onboard.referral")} <strong>{accountInfo?.referral}</strong>
-                </span>
-              </div>
-              <span className="mt-3">{_t("onboard.copy-key")}</span>
-              <div className="mt-3 flex flex-col items-center">
-                <div className="flex">
-                  <span className="mr-3 mt-1">
-                    {innerWidth <= 768 ? shortPassword + "..." : masterPassword}
-                  </span>
-                  <Tooltip content={_t("onboard.copy-tooltip")}>
-                    <span
-                      className="onboard-svg mr-3"
-                      onClick={() => {
-                        clipboard(masterPassword);
-                        success(_t("onboard.copy-password"));
-                      }}
-                    >
-                      {copyContent}
-                    </span>
-                  </Tooltip>
-                  <Tooltip content={_t("onboard.regenerate-password")}>
-                    <span className="onboard-svg" onClick={() => initAccountKey()}>
-                      {regenerateSvg}
-                    </span>
-                  </Tooltip>
-                </div>
-                <Button
-                  className="self-center mt-3"
-                  disabled={!accountInfo?.username || !accountInfo.email}
-                  onClick={() => downloadKeys()}
-                  icon={downloadSvg}
-                >
-                  {_t("onboard.download-keys")}
-                </Button>
-
-                {fileIsDownloaded && (
-                  <Alert className="flex flex-col self-center justify-center mt-3">
-                    {!props.activeUser && (
-                      <>
-                        <h4>{_t("onboard.copy-info-message")}</h4>
-                        <div className="flex items-center">
-                          <span className="">{splitUrl(onboardUrl + secret)}...</span>
-                          <span
-                            style={{ width: "5%" }}
-                            className="onboard-svg"
-                            onClick={() => {
-                              clipboard(onboardUrl + secret);
-                              success(_t("onboard.copy-link"));
-                            }}
-                          >
-                            {copyContent}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                    {props.activeUser && (
-                      <>
-                        <span>
-                          <a href={onboardUrl + secret}>{_t("onboard.click-link")}</a>
-                        </span>
-                      </>
-                    )}
-                  </Alert>
-                )}
-              </div>
-            </div>
+              Visit @{decodedInfo?.username}'s profile
+            </Link>
+            <BubbleSprinkle />
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="onboard-container">
+            <div className="asking">
+              <div
+                className={`asking-body flex mb-0 self-center flex-col ${
+                  innerWidth < 577 ? "p-3" : "p-5"
+                }`}
+              >
+                <h3 className="mb-3 self-center text-2xl font-semibold text-blue-dark-sky">
+                  {_t("onboard.confirm-details")}
+                </h3>
 
-      {props.match.params.type === "creating" && props.match.params.secret && (
-        <div className="onboard-container">
-          {props.activeUser ? (
-            <div className="creating-confirm asking asking-body p-4">
-              <h3 className="align-self-center text-2xl font-semibold text-blue-dark-sky">
-                {_t("onboard.confirm-details")}
-              </h3>
-              {confirmDetails && (
-                <>
-                  {confirmDetails.map((field, index) => (
-                    <span key={index}>
-                      {field.label}
-                      <strong style={{ wordBreak: "break-word", marginLeft: "10px" }}>
-                        {field.value}
-                      </strong>
-                    </span>
-                  ))}
-                </>
-              )}
+                <div className="reg-details">
+                  <span style={{ lineHeight: 2 }}>
+                    {_t("onboard.username")} <strong>{accountInfo?.username}</strong>
+                  </span>
+                  <span style={{ lineHeight: 2 }}>
+                    {_t("onboard.email")} <strong>{accountInfo?.email}</strong>
+                  </span>
+                  <span style={{ lineHeight: 2 }}>
+                    {_t("onboard.referral")} <strong>{accountInfo?.referral}</strong>
+                  </span>
+                </div>
 
-              <div className="onboard-delegate-rc">
-                <div className="col-span-12 sm:col-span-10">
-                  <div className="onboard-check mb-2">
-                    <input
-                      type="checkbox"
-                      className="onboard-checkbox"
-                      checked={isChecked}
-                      onChange={() => {
-                        setChecked(!isChecked);
-                      }}
-                    />
-                    <span className="onboard-blinking-text">
-                      {_t("onboard.rc-to-new-acc")} {decodedInfo && decodedInfo!.username}{" "}
-                      {_t("onboard.minimum-rc")}
+                <span className="mt-3">{_t("onboard.copy-key")}</span>
+
+                <div className="mt-3 flex flex-col items-center">
+                  <div className="flex">
+                    <span className="mr-3 mt-1">
+                      {innerWidth <= 768 ? shortPassword + "..." : masterPassword}
                     </span>
+                    <Tooltip content={_t("onboard.copy-tooltip")}>
+                      <span
+                        className="onboard-svg mr-3"
+                        onClick={() => {
+                          clipboard(masterPassword);
+                          success(_t("onboard.copy-password"));
+                        }}
+                      >
+                        {copyContent}
+                      </span>
+                    </Tooltip>
+                    <Tooltip content={_t("onboard.regenerate-password")}>
+                      <span
+                        className="onboard-svg"
+                        onClick={() => initAccountKey()}
+                      >
+                        {regenerateSvg}
+                      </span>
+                    </Tooltip>
                   </div>
-                  {isChecked && (
-                    <div className="mt-3">
-                      {rcAmount && rcError ? (
-                        <span className="text-danger mt-3">{rcError}</span>
-                      ) : (
-                        ""
-                      )}
-                      <InputGroup>
-                        <FormControl
-                          type="text"
-                          placeholder={"Enter amount to delegate(Bn)"}
-                          value={rcAmount}
-                          onChange={(e: any) => setRcAmount(Number(e.target.value))}
-                        />
-                      </InputGroup>
-                      <div className="operation-amount d-flex mt-3">
-                        <span className="operations">
-                          {_t("onboard.posts-comments")} {commentAmount} |
-                        </span>
-                        <span className="operations">
-                          {_t("onboard.votes")} {voteAmount} |
-                        </span>
-                        <span className="operations">
-                          {_t("onboard.transfers")} {transferAmount} |
-                        </span>
-                        <span className="operations">
-                          {_t("onboard.reblogs-follows")} {customJsonAmount}
-                        </span>
-                      </div>
-                    </div>
+
+                  <Button
+                    className="self-center mt-3"
+                    disabled={!accountInfo?.username}
+                    onClick={() => downloadKeys()}
+                    icon={downloadSvg}
+                  >
+                    {_t("onboard.download-keys")}
+                  </Button>
+
+                  {fileIsDownloaded && (
+                    <>
+                      <Alert className="flex flex-col self-center justify-center mt-3">
+                        {!props.activeUser ? (
+                          <>
+                            <h4>{_t("onboard.copy-info-message")}</h4>
+                            <div className="flex items-center">
+                              <span>{splitUrl(onboardUrl + secret)}...</span>
+                              <span
+                                style={{ width: "5%" }}
+                                className="onboard-svg"
+                                onClick={() => {
+                                  clipboard(onboardUrl + secret);
+                                  success(_t("onboard.copy-link"));
+                                }}
+                              >
+                                {copyContent}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <span>
+                            <a href={onboardUrl + secret}>
+                              {_t("onboard.click-link")}
+                            </a>
+                          </span>
+                        )}
+                      </Alert>
+
+                      {/* <OrDivider />
+
+                      <div className="qr-section">
+                        <h4>Pay with bitcoin lightning</h4>
+                        <Button
+                          className="align-self-center"
+                          onClick={async () => {
+                            await getLightningAcc();
+                          }}
+                        >
+                          Click to get lightning QR
+                        </Button>
+                        {invoiceData && (
+                          <>
+                            <p>Scan QR to complete payment</p>
+                            <QRCode
+                              size={256}
+                              style={{ height: "300px", width: "300px" }}
+                              value={`lightning:${invoiceData?.payment_request}`}
+                              viewBox={`0 0 256 256`}
+                            />
+                          </>
+                        )}
+                      </div> */}
+                    </>
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        )
+      )}
 
-              <div className="creating-confirm-bottom">
-                <span>{_t("onboard.pay-fee")}</span>
-                <div className="onboard-btn-container">
-                  <Button
-                    className="align-self-center"
-                    onClick={() => {
-                      setCreateOption("hive");
-                      setShowModal(true);
-                      setStep("sign");
-                    }}
-                  >
-                    {_t("onboard.create-account-hive")}
-                  </Button>
-                  <Button
-                    className="align-self-center"
-                    disabled={accountCredit <= 0 || (isChecked && rcError !== "")}
-                    onClick={() => {
-                      setCreateOption("credit");
-                      setShowModal(true);
-                      setStep("sign");
-                    }}
-                  >
-                    {_t("onboard.create-account-credit", { n: accountCredit })}
-                  </Button>
+      {props.match?.params?.type === "creating" && props.match?.params?.secret && (
+        <div className="onboard-container">
+          {props.activeUser ? (
+            status === "account_created" ? (
+              <div className="creating-confirm asking asking-body p-4 text-center">
+                <h2 className="align-self-center">✅ Account Created successfully</h2>
+                <Link to={`/@${decodedInfo!.username}`} className="align-self-center">Visit @{decodedInfo!.username}`s profile</Link>
+                <BubbleSprinkle />
+              </div>
+            ) : (
+              <div className="creating-confirm asking asking-body p-4">
+                <h3 className="align-self-center text-2xl font-semibold text-blue-dark-sky">
+                  {_t("onboard.confirm-details")}
+                </h3>
+
+                {confirmDetails && confirmDetails.map((field, index) => (
+                  <span key={index}>
+                    {field.label}
+                    <strong style={{ wordBreak: "break-word", marginLeft: "10px" }}>
+                      {field.value}
+                    </strong>
+                  </span>
+                ))}
+
+                {/* RC delegation section */}
+                <div className="onboard-delegate-rc">
+                  <div className="col-span-12 sm:col-span-10">
+                    <div className="onboard-check mb-2">
+                      <input
+                        type="checkbox"
+                        className="onboard-checkbox"
+                        checked={isChecked}
+                        onChange={() => setChecked(!isChecked)}
+                      />
+                      <span className="onboard-blinking-text">
+                        {_t("onboard.rc-to-new-acc")} {decodedInfo?.username} {_t("onboard.minimum-rc")}
+                      </span>
+                    </div>
+
+                    {isChecked && (
+                      <div className="mt-3">
+                        {rcAmount && rcError && (
+                          <span className="text-danger mt-3">{rcError}</span>
+                        )}
+                        <InputGroup>
+                          <FormControl
+                            type="text"
+                            placeholder={"Enter amount to delegate(Bn)"}
+                            value={rcAmount}
+                            onChange={(e) => setRcAmount(Number(e.target.value))}
+                          />
+                        </InputGroup>
+                        <div className="operation-amount d-flex mt-3">
+                          <span className="operations">
+                            {_t("onboard.posts-comments")} {commentAmount} |
+                          </span>
+                          <span className="operations">
+                            {_t("onboard.votes")} {voteAmount} |
+                          </span>
+                          <span className="operations">
+                            {_t("onboard.transfers")} {transferAmount} |
+                          </span>
+                          <span className="operations">
+                            {_t("onboard.reblogs-follows")} {customJsonAmount}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <Button
-                    className="align-self-center"
-                    // disabled={accountCredit <= 0 || (isChecked && rcError !== "")}
-                    onClick={() => {
-                      setCreateOption("credit");
-                      setShowModal(true);
-                      setStep("sign");
-                    }}
-                  >
-                    Pay with bitcoin lightning
-                  </Button>
+
+                {/* Payment options */}
+                <div className="creating-confirm-bottom">
+                  <span>{_t("onboard.pay-fee")}</span>
+                  <div className="onboard-btn-container">
+                    <Button
+                      className="align-self-center"
+                      onClick={() => {
+                        setCreateOption("hive");
+                        setShowModal(true);
+                        setStep("sign");
+                      }}
+                    >
+                      {_t("onboard.create-account-hive")}
+                    </Button>
+                    <Button
+                      className="align-self-center"
+                      disabled={accountCredit <= 0 || (isChecked && rcError !== "")}
+                      onClick={() => {
+                        setCreateOption("credit");
+                        setShowModal(true);
+                        setStep("sign");
+                      }}
+                    >
+                      {_t("onboard.create-account-credit", { n: accountCredit })}
+                    </Button>
+                  </div>
+
+                  {/* Lightning QR */}
+                  <div className="qr-section">
+                    <Button
+                      className="align-self-center"
+                      onClick={async () => {
+                        await getLightningAcc();
+                      }}
+                    >
+                      Pay with bitcoin lightning
+                    </Button>
+                    {invoiceData && (
+                       <>
+                        <p>Scan QR to complete payment</p>
+                        <QRCode
+                          size={256}
+                          style={{ height: "300px", width: "300px" }}
+                          value={`lightning:${invoiceData?.payment_request}`}
+                          viewBox={`0 0 256 256`}
+                        />
+                       </>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )
           ) : (
             <div className="login-warning">{_t("onboard.login-warning")}</div>
           )}
@@ -859,6 +984,32 @@ const Onboard = (props: Props) => {
       </Modal>
     </>
   );
+};
+
+// BubbleSprinkle.tsx
+const BubbleSprinkle: React.FC = () => {
+  useEffect(() => {
+    const container = document.body; // sprinkle across whole page
+
+    for (let i = 0; i < 30; i++) {
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+
+      // random position and size
+      bubble.style.left = Math.random() * 100 + "vw";
+      bubble.style.width = bubble.style.height = 10 + Math.random() * 20 + "px";
+
+      // random animation duration
+      bubble.style.animationDuration = 3 + Math.random() * 2 + "s";
+
+      container.appendChild(bubble);
+
+      // cleanup after animation
+      setTimeout(() => bubble.remove(), 5000);
+    }
+  }, []);
+
+  return null;
 };
 
 export default connect(pageMapStateToProps, pageMapDispatchToProps)(Onboard);

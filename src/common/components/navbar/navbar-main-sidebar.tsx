@@ -123,11 +123,11 @@ export function NavbarMainSidebar({ show, setShow, history, setStepOne }: Props)
 
           <hr className="my-2" />
           <div className="text-xs">
-            <NavbarSideMainMenuItem
+            {/* <NavbarSideMainMenuItem
               label={_t("entry-index.faq")}
               to="/faq"
               onClick={() => setShow(false)}
-            />
+            /> */}
             {/* <NavbarSideMainMenuItem
               label={_t("entry-index.tos")}
               to="/terms-of-service"

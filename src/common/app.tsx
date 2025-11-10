@@ -228,7 +228,7 @@ const App = (props: any) => {
         </Switch>
 
         {/* <Announcement activeUser={props.activeUser} /> */}
-        <FloatingFAQ />
+        {/* <FloatingFAQ /> */}
         {/* <ChatPopUp {...props} /> */}
         {/* </ChatContextProvider> */}
         <div id="modal-overlay-container" />

@@ -254,3 +254,78 @@ export const fetchOrdinals = async (address: any) => {
     return [];
   }
 };
+
+export const getInvoice = async (setInvoiceData: any, username: string) => {
+  try {
+    const satsToPay = await getHiveToSats(3);
+    const response = await axios.get("https://api.v4v.app/v1/new_invoice_hive", {
+      params: {
+        hive_accname: "lightningin",   // Hive account to receive funds
+        amount: 250,                    // Amount requested
+        currency: "SATS",                // Unit of requested amount
+        receive_currency: "sats",        // How the receiver gets it
+        usd_hbd: false,                  // Whether to use USD conversion for HBD
+        app_name: "BAC",                // Your app name
+        expiry: 300,                     // Expiry in seconds
+        message: username,
+        qr_code: "none"                  // "png" if you want image from API
+      },
+      headers: {
+        accept: "application/json",
+      },
+    });
+
+    // console.log("Invoice Data:", `lightning:${response?.data.payment_request}`);
+    // console.log("Api Data:", response?.data);
+    setInvoiceData(response?.data)
+    return response.data
+  } catch (error: any) {
+    console.error("Error fetching invoice:", error.response?.data || error.message);
+  }
+};
+
+export const getLightning = async (data: any) => {
+  // console.log("object data", data)
+  try {
+    const response = await axios.post(
+      `${baUrl}/lightning-account`,
+      data,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    // console.log("✅ Lightning account response:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ getLightning error:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const getHiveToSats = async (hiveAmount: number): Promise<number> => {
+  const res = await axios.get(
+    "https://api.coingecko.com/api/v3/simple/price?ids=hive&vs_currencies=btc"
+  );
+
+  // console.log("object...", res)
+
+  const hivePriceBTC = res.data?.hive?.btc || 0;
+  const sats = Math.round(hiveAmount * hivePriceBTC * 100_000_000);
+
+  // console.log("sats.....", sats)
+  return sats;
+}
+
+export const getAccountStatus = async (username: string) => {
+  try {
+    const response = await axios.get(`${baUrl}/account-status/${username}`);
+    // console.log("status....",response)
+    return response.data; // { created: boolean, status?: string, account?: object }
+  } catch (error: any) {
+    console.error("❌ Error fetching account status:", error.response?.data || error.message);
+    throw error;
+  }
+};

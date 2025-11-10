@@ -146,3 +146,48 @@
   color: rgb(179, 95, 26);
   animation: blink 2s infinite;
 }
+
+.qr-sectiom{
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.bubble-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.bubble {
+  position: absolute;
+  bottom: 0;
+  background: rgba(0, 191, 255, 0.7);
+  border-radius: 50%;
+  animation: rise linear forwards;
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100vh) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.qr-section{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}

@@ -39,6 +39,11 @@ import { Button } from "@ui/button";
 import { Form } from "@ui/form";
 import { getUserByUsername, processLogin } from "../../api/breakaway";
 import { getCommunity } from "../../api/bridge";
+import QRCode from "react-qr-code";
+import { encodeOp } from "hive-uri";
+// const keyChainLogo = require("../../img/keychain.png");
+import { loginHAS } from "./hasLogin";
+import { b64uEnc } from "../../util/b64";
 
 declare var window: AppWindow;
 
@@ -56,13 +61,21 @@ interface LoginKcState {
   username: string;
   inProgress: boolean;
   community: string | any;
+  evtURI: any;
+  useQR: boolean;
+  evt: any;
+  hasSign: any;
 }
 
 export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
   state: LoginKcState = {
     username: "",
     inProgress: false,
-    community: ""
+    community: "",
+    evtURI: "",
+    useQR: false,
+    evt: null,
+    hasSign: ""
   };
 
   componentDidMount(): void {
@@ -149,7 +162,7 @@ export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
     // const signer = (message: string): Promise<string> =>
     //   signBuffer(username, message, "Posting").then((r) => r.result);
 
-    const signer = async (message: string): Promise<string> => {
+    const signer = async (message: string): Promise<string> => {      
       const ts: any = Date.now();
       const sign = await signBuffer(username, message, "Posting").then((r) => r.result);
       const signBa = await signBuffer(username, `${username}${ts}`, "Posting").then(
@@ -174,7 +187,6 @@ export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
     }
 
     const { doLogin } = this.props;
-
     doLogin(code, null, account)
       .then(() => {
         this.hide();
@@ -192,12 +204,57 @@ export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
     toggleUIProp("loginKc");
   };
 
+  handleGenerateQR = async () => {
+    const { username } = this.state;
+    const qrUri = await loginHAS(username, this.setQrValue, this.setSign, this.confirmMobileLogin);
+    this.setState({ evtURI: qrUri });
+  };
+
+  setQrValue = (a: any) => {
+    this.setState({evt: a})
+  }
+
+  setSign = (sign: any) => {
+    this.setState({hasSign: sign})
+  }
+
+  confirmMobileLogin = async () => {
+    const { username, hasSign } = this.state;
+    const { hsClientId } = this.props.global;
+    
+    const base64 = b64uEnc(JSON.stringify(hasSign));
+    
+    const account = await getAccount(username);
+
+    const { doLogin } = this.props;
+        doLogin(base64, null, account)
+          .then(() => {
+            this.hide();
+          })
+          .catch(() => {
+            error(_t("g.server-error"));
+          })
+          .finally(() => {
+            this.stateSet({ inProgress: false });
+          });
+  }
+  
   render() {
-    const { username, inProgress } = this.state;
+    const { username, inProgress, evtURI, useQR, evt } = this.state;
+    console.log("object..,evt", evt)
 
     const keyChainLogo = require("../../img/keychain.png");
 
     const spinner = <Spinner className="mr-[6px] w-3.5 h-3.5" />;
+    
+    
+    const op: any = [
+      "login",
+      {
+        username,
+        token: Math.floor(Date.now() / 1000).toString(),
+      },
+    ];
 
     return (
       <>
@@ -222,15 +279,42 @@ export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
               onKeyDown={this.inputKeyDown}
             />
           </div>
+
           <div className="flex items-center justify-center gap-4">
             <Button disabled={inProgress} className="block" onClick={this.login}>
               {inProgress && spinner}
               {_t("g.login")}
             </Button>
+              
             <Button outline={true} className="block" disabled={inProgress} onClick={this.back}>
               {_t("g.back")}
             </Button>
+            <Button onClick={()=> {
+              this.handleGenerateQR()
+              this.setState({useQR: true})
+              }}>
+              Get login Qr
+            </Button>
           </div>
+
+          {this.state.evt && <div className="mobileQr">
+            <h4>Scan or clikc QR code</h4>
+              <a 
+              href={evt} 
+              onClick={this.login}
+              >
+                <QRCode
+                      size={256}
+                      style={{
+                        height: "300",
+                        // maxWidth: "100%",
+                        width: "300"
+                      }}
+                      value={evt}
+                      viewBox={`0 0 256 256`}
+                    />
+              </a>
+          </div>}
         </Form>
       </>
     );
@@ -634,7 +718,7 @@ export class Login extends BaseComponent<LoginProps, State> {
             <OrDivider />
           </>
         )}
-
+{/* 
         <Form
           className="login-form"
           onSubmit={(e: React.FormEvent) => {
@@ -689,15 +773,16 @@ export class Login extends BaseComponent<LoginProps, State> {
           </p>
           <Button
             full={true}
-            disabled={inProgress || !isVerified}
+            disabled={inProgress}
+            // disabled={inProgress || !isVerified}
             className="block"
             onClick={this.login}
           >
             {inProgress && username && key && spinner}
             {_t("g.login")}
           </Button>
-        </Form>
-        <OrDivider />
+        </Form> */}
+        {/* <OrDivider /> */}
         {/* <div className="hs-login">
           <Button
             outline={true}
@@ -709,19 +794,24 @@ export class Login extends BaseComponent<LoginProps, State> {
             {_t("login.with-hive-signer")}
           </Button> */}
         {/* </div> */}
-        {global.hasKeyChain && (
-          <div className="kc-login">
-            <Button
+        {/* {global.hasKeyChain && ( */}
+          {/* <div className="kc-login"> */}
+            {/* <Button
               outline={true}
-              onClick={this.kcLogin}
+              onClick={() => {
+                // this.loginHAS('')
+                this.kcLogin()
+              }
+              }
               disabled={inProgress}
               icon={<img src={keyChainLogo} className="kc-logo" alt="keychain" />}
               iconPlacement="left"
             >
               {_t("login.with-keychain")}
-            </Button>
-          </div>
-        )}
+            </Button> */}
+            <LoginKc {...this.props} doLogin={this.props.doLogin} />
+          {/* </div> */}
+        {/* )} */}
         {activeUser === null && (
           <p>
             {_t("login.sign-up-text-1")}
@@ -826,7 +916,7 @@ class LoginDialog extends Component<Props> {
           {!ui.loginKc && (
             <Login {...this.props} doLogin={this.doLogin} userListRef={this.userListRef} />
           )}
-          {ui.loginKc && <LoginKc {...this.props} doLogin={this.doLogin} />}
+          {/* {ui.loginKc && <LoginKc {...this.props} doLogin={this.doLogin} />} */}
         </ModalBody>
       </Modal>
     );

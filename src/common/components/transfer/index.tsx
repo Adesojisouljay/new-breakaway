@@ -61,6 +61,8 @@ import exchangeAccounts from "../../constants/exchanges";
 import { queryClient, QueryIdentifiers } from "../../core";
 import { Button } from "@ui/button";
 import { Form } from "@ui/form";
+import QRCode from "react-qr-code";
+import { encodeOp, encodeOps } from "hive-uri";
 
 export type TransferMode =
   | "transfer"
@@ -661,6 +663,22 @@ export class Transfer extends BaseComponent<Props, State> {
     this.stateSet(pureState(this.props));
   };
 
+  
+
+  mobileTransfer = async (e:  any) => {
+    e.preventDefault();
+
+    const { to, amount, asset, memo } = this.state;
+    const { activeUser } = this.props;
+
+    // if (isMobile()) {
+      const hiveUri = `hive://sign/transfer?from=${activeUser}&to=${to}&amount=${parseFloat(amount).toFixed(3)} ${asset}&memo=${encodeURIComponent(memo)}`;
+      window.location.href = hiveUri;
+      return;
+    // }
+     
+  };
+  
   render() {
     const { global, mode, activeUser, transactions, dynamicProps } = this.props;
     const {
@@ -680,6 +698,18 @@ export class Transfer extends BaseComponent<Props, State> {
       delegationList
     } = this.state;
     const { hivePerMVests } = dynamicProps;
+
+    const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    const op: any = [
+      "transfer",
+      {
+        from: activeUser.username,
+        to,
+        amount: `${amount} ${asset}`,
+        memo,
+      },
+    ];
 
     const recent = [
       ...new Set(
@@ -1039,13 +1069,32 @@ export class Transfer extends BaseComponent<Props, State> {
             {formHeader3}
             {inProgress && <LinearProgress />}
             <div className="transaction-form">
-              {KeyOrHot({
+              {/* {KeyOrHot({
                 ...this.props,
                 inProgress,
                 onKey: this.sign,
                 onHot: this.signHs,
                 onKc: this.signKs
-              })}
+              })} */}
+
+              {/* {isMobile() &&  */}
+              <div className="mobileQr" onClick={this.mobileTransfer}>
+                <h4>Scan or clikc QR code</h4>
+                <QRCode
+                      size={256}
+                      style={{
+                        height: "300",
+                        // maxWidth: "100%",
+                        width: "300"
+                      }}
+                      value={encodeOp(op)}
+                      viewBox={`0 0 256 256`}
+                    />
+              </div>
+              {/* // } */}
+
+              <hr className="m-5" />
+
               <p className="text-center">
                 <a
                   href="#"

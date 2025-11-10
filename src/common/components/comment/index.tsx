@@ -186,7 +186,7 @@ export class Comment extends Component<Props, State> {
       await onSubmit(text);
       this.setState({ text: "" });
 
-      const res = await updateUserPoints(activeUser!.username, communityData.title, "comments");
+      // const res = await updateUserPoints(activeUser!.username, communityData.title, "comments");
     } catch (error) {}
   };
 

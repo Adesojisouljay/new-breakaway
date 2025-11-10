@@ -1,7 +1,10 @@
 @import "../../style/vars_mixins";
 
 .sign-up-page {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
 
   .sign-up {
     max-width: 1400px;
@@ -42,6 +45,11 @@
     }
 
     .the-form {
+      min-width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
       @media (min-width: $xl-break) {
         height: calc(100vh - 6rem);
         width: 50%;

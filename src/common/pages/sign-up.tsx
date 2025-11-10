@@ -63,7 +63,6 @@ export const SignUp = (props: PageProps) => {
   const [newUserKeys, setNewUserKeys]: any = useState(null);
   const [isDownloaded, setIsDownloaded] = useState(true);
   const [accountPassword, setAccountPassword] = useState("");
-  console.log(props);
 
   const form = useRef<any>();
   const qrCodeRef = useRef<any>();
@@ -178,31 +177,32 @@ export const SignUp = (props: PageProps) => {
 
   useEffect(() => {
     initiateAccount();
+    console.log(props.global)
   }, []);
 
-  const regularRegister = async () => {
-    setInProgress(true);
-    try {
-      const response = await signUp(username, email, referral);
-      if (!isVerified) {
-        error(_t("login.captcha-check-required"));
-        return;
-      }
-      if (response?.data?.code) {
-        setRegistrationError(response.data.code);
-      } else {
-        setDone(true);
-        setLsReferral(undefined);
-        setStage(Stage.FORM);
-      }
-    } catch (e) {
-      if (axios.isAxiosError(e) && e.response?.data?.message) {
-        setRegistrationError(e.response.data.message);
-      }
-    } finally {
-      setInProgress(false);
-    }
-  };
+  // const regularRegister = async () => {
+  //   setInProgress(true);
+  //   try {
+  //     const response = await signUp(username, email, referral);
+  //     if (!isVerified) {
+  //       error(_t("login.captcha-check-required"));
+  //       return;
+  //     }
+  //     if (response?.data?.code) {
+  //       setRegistrationError(response.data.code);
+  //     } else {
+  //       setDone(true);
+  //       setLsReferral(undefined);
+  //       setStage(Stage.FORM);
+  //     }
+  //   } catch (e) {
+  //     if (axios.isAxiosError(e) && e.response?.data?.message) {
+  //       setRegistrationError(e.response.data.message);
+  //     }
+  //   } finally {
+  //     setInProgress(false);
+  //   }
+  // };
 
   const compileQR = async (url: string) => {
     if (qrCodeRef.current) {
@@ -210,11 +210,11 @@ export const SignUp = (props: PageProps) => {
     }
   };
 
-  const captchaCheck = (value: string | null) => {
-    if (value) {
-      setIsVerified(true);
-    }
-  };
+  // const captchaCheck = (value: string | null) => {
+  //   if (value) {
+  //     setIsVerified(true);
+  //   }
+  // };
 
   const encodeUrlInfo = (username: string, email: string, referral: string) => {
     const accInfo = {
@@ -322,16 +322,16 @@ export const SignUp = (props: PageProps) => {
       <NavBar history={props.history} />
       <div className="app-content sign-up-page mb-lg-0">
         <div className="sign-up">
-          <div className={"left-image " + stage}>
+          {/* <div className={"left-image " + stage}>
             <img src={signupSvg} alt="Signup" />
-          </div>
+          </div> */}
           <div className="the-form">
             {stage === Stage.FORM ? (
               <>
                 <div className="form-title">{_t("sign-up.header")}</div>
                 <div className="form-sub-title">{_t("sign-up.description")}</div>
                 <div className="flex items-center justify-center form-icons">
-                  <img src={logoCircle} alt="Ecency" title="Ecency" />
+                 <img src={`https://images.hive.blog/u/${props.global.hive_id}/avatar`} alt="Ecency" title="Ecency" />
                   <span title="Hive">{hiveSvg}</span>
                 </div>
 
@@ -396,7 +396,7 @@ export const SignUp = (props: PageProps) => {
                       setStage(Stage.REGISTER_TYPE);
                     }
 
-                    if ((username && email) || referral) {
+                    if ((username) || email || referral) {
                       encodeUrlInfo(username, email, referral);
                     }
                   }}
@@ -416,19 +416,19 @@ export const SignUp = (props: PageProps) => {
                     />
                     <small className="text-red pl-3">{usernameError}</small>
                   </div>
-                  <div className="mb-4">
-                    <FormControl
+                  {/* <div className="mb-4"> */}
+                    {/* <FormControl
                       type="email"
                       placeholder={_t("sign-up.email")}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      required={true}
+                      // required={true}
                       onInvalid={(e: any) => handleInvalid(e, "sign-up.", "validation-email")}
                       aria-invalid={emailError !== ""}
                       onInput={handleOnInput}
                     />
-                    <small className="text-red pl-3">{emailError}</small>
-                  </div>
+                    <small className="text-red pl-3">{emailError}</small> */}
+                  {/* </div> */}
                   <div className="mb-4">
                     <FormControl
                       type="text"
@@ -441,20 +441,20 @@ export const SignUp = (props: PageProps) => {
                     />
                     <small className="text-red pl-3">{referralError}</small>
                   </div>
-                  <div style={{ marginTop: "16px", marginBottom: "16px" }}>
+                  {/* <div style={{ marginTop: "16px", marginBottom: "16px" }}>
                     <ReCAPTCHA
                       sitekey="6LdEi_4iAAAAAO_PD6H4SubH5Jd2JjgbIq8VGwKR"
                       onChange={captchaCheck}
                       size="normal"
                     />
-                  </div>
+                  </div> */}
                   {stage === Stage.FORM ? (
                     <>
                       <div className="flex justify-center">
                         <Button
                           className="block"
                           type="submit"
-                          disabled={inProgress || !isVerified || isDisabled}
+                          disabled={inProgress || isDisabled}
                           icon={inProgress && <Spinner className="w-3.5 h-3.5" />}
                           iconPlacement="left"
                         >
