@@ -1,0 +1,132 @@
+@import "src/style/vars_mixins";
+
+.wallet-ecency {
+  @include wallet;
+
+  .coin-wrapper {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border-radius: 16px;
+    width: 100%;
+  }
+  
+  .token-card {
+    background: rgb(18, 18, 58);
+    border-radius: 14px;
+    padding: 15px;
+    display: flex;
+
+    flex-direction: column;
+    transition: all 0.25s ease;
+  
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    @include themify(day) {
+        @apply bg-light-200;
+        // border: 2px solid;
+        @apply border-light-300;
+      }
+  
+      @include themify(night) {
+        @apply bg-dark-200;
+        // border: 2px solid;
+        @apply border-dark-600;
+      }
+  }
+  
+  /* Token header (logo + name) */
+  .token-info {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  
+    .token-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: contain;
+      background-color: #f5f7fa;
+      border: 1px solid #e5e7eb;
+    }
+  
+    .token-name {
+      font-weight: 600;
+      font-size: 1rem;
+    //   color: #111827;
+    }
+  
+    .token-symbol {
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+  }
+  
+  /* Balance display */
+  .token-balance {
+    font-size: 1.3rem;
+    font-weight: 700;
+    // color: #111827;
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Address + copy */
+  .token-address {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f3f4f6;
+    border-radius: 8px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    color: #4b5563;
+    margin-bottom: 1rem;
+    font-family: monospace;
+  
+    span {
+      color: #111827;
+    }
+  
+    .copy {
+      color: #2563eb;
+      cursor: pointer;
+      font-weight: 500;
+      transition: color 0.2s ease;
+  
+      &:hover {
+        color: #1d4ed8;
+      }
+    }
+  }
+  
+  /* Send button */
+  .send-btn {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.25s ease;
+  
+    &:hover {
+      background: #1e40af;
+    }
+  }
+  
+
+// .coin-wrapper{
+//     display: flex;
+//     flex: wrap;
+// }
+}
+
+  
