@@ -663,22 +663,21 @@ export class Transfer extends BaseComponent<Props, State> {
     this.stateSet(pureState(this.props));
   };
 
-  
-
-  mobileTransfer = async (e:  any) => {
+  mobileTransfer = async (e: any) => {
     e.preventDefault();
 
     const { to, amount, asset, memo } = this.state;
     const { activeUser } = this.props;
 
     // if (isMobile()) {
-      const hiveUri = `hive://sign/transfer?from=${activeUser}&to=${to}&amount=${parseFloat(amount).toFixed(3)} ${asset}&memo=${encodeURIComponent(memo)}`;
-      window.location.href = hiveUri;
-      return;
+    const hiveUri = `hive://sign/transfer?from=${activeUser}&to=${to}&amount=${parseFloat(
+      amount
+    ).toFixed(3)} ${asset}&memo=${encodeURIComponent(memo)}`;
+    window.location.href = hiveUri;
+    return;
     // }
-     
   };
-  
+
   render() {
     const { global, mode, activeUser, transactions, dynamicProps } = this.props;
     const {
@@ -707,8 +706,8 @@ export class Transfer extends BaseComponent<Props, State> {
         from: activeUser.username,
         to,
         amount: `${amount} ${asset}`,
-        memo,
-      },
+        memo
+      }
     ];
 
     const recent = [
@@ -1081,15 +1080,15 @@ export class Transfer extends BaseComponent<Props, State> {
               <div className="mobileQr" onClick={this.mobileTransfer}>
                 <h4>Scan or clikc QR code</h4>
                 <QRCode
-                      size={256}
-                      style={{
-                        height: "300",
-                        // maxWidth: "100%",
-                        width: "300"
-                      }}
-                      value={encodeOp(op)}
-                      viewBox={`0 0 256 256`}
-                    />
+                  size={256}
+                  style={{
+                    height: "300",
+                    // maxWidth: "100%",
+                    width: "300"
+                  }}
+                  value={encodeOp(op)}
+                  viewBox={`0 0 256 256`}
+                />
               </div>
               {/* // } */}
 

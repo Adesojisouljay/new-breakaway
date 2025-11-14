@@ -110,8 +110,10 @@ const Onboard = (props: Props) => {
   const [transferAmount, setTransferAmount] = useState(0);
   const [customJsonAmount, setCustomJsonAmount] = useState(0);
   const [invoiceData, setInvoiceData] = useState<any>(null);
-  const [status, setStatus] = useState<"checking" | "pending" | "paid" | "account_created" | "notfound">("checking");
-  const [bubbles, setBubbles] = useState<any>()
+  const [status, setStatus] = useState<
+    "checking" | "pending" | "paid" | "account_created" | "notfound"
+  >("checking");
+  const [bubbles, setBubbles] = useState<any>();
 
   useEffect(() => {
     setOnboardUrl(`${window.location.origin}/onboard-friend/creating/`);
@@ -130,7 +132,7 @@ const Onboard = (props: Props) => {
     if (props.match.params.type == "asking") {
       initAccountKey();
     }
-    console.log(accountInfo?.username)
+    console.log(accountInfo?.username);
   }, [accountInfo?.username]);
 
   useEffect(() => {
@@ -171,23 +173,22 @@ const Onboard = (props: Props) => {
   }, [isChecked]);
 
   useEffect(() => {
-    console.log("...v...")
-    console.log("...v...", decodedInfo?.username, accountInfo?.username)
-    
+    console.log("...v...");
+    console.log("...v...", decodedInfo?.username, accountInfo?.username);
+
     if (!decodedInfo?.username) return;
 
     const interval = setInterval(async () => {
       try {
         const res = await getAccountStatus(decodedInfo?.username);
-        console.log("res..res..res", res)
+        console.log("res..res..res", res);
 
-          if(res.status === "pending") {
+        if (res.status === "pending") {
           setStatus(res.status || "pending");
-          }
-         else if (res.status === "account_created") {
-            setStatus("account_created");
-            clearInterval(interval); // stop polling once done
-          }
+        } else if (res.status === "account_created") {
+          setStatus("account_created");
+          clearInterval(interval); // stop polling once done
+        }
         // }
       } catch (err) {
         console.error("Error checking account status:", err);
@@ -241,7 +242,7 @@ const Onboard = (props: Props) => {
         keys
       };
 
-      console.log("object...", accInfo)
+      console.log("object...", accInfo);
       setAccountInfo(accInfo);
       setMasterPassword(masterPassword);
       return masterPassword;
@@ -266,17 +267,19 @@ const Onboard = (props: Props) => {
 
   const getLightningAcc = async () => {
     try {
+      console.log("object...", accountInfo);
+      const invoiceData = await getInvoice(
+        setInvoiceData,
+        accountInfo?.username || decodedInfo!?.username
+      );
 
-      console.log("object...", accountInfo)
-      const invoiceData = await getInvoice(setInvoiceData, accountInfo?.username || decodedInfo!?.username)
-   
       const data = {
         username: decodedInfo!?.username || accountInfo?.username,
         accountKeys: {
           ownerPubkey: decodedInfo?.pubkeys?.ownerPublicKey || accountInfo?.keys?.ownerPubkey,
           activePubkey: decodedInfo?.pubkeys?.activePublicKey || accountInfo?.keys?.activePubkey,
           postingPubkey: decodedInfo?.pubkeys?.postingPublicKey || accountInfo?.keys?.postingPubkey,
-          memoPubkey: decodedInfo?.pubkeys?.memoPublicKey || accountInfo?.keys?.memoPubkey,
+          memoPubkey: decodedInfo?.pubkeys?.memoPublicKey || accountInfo?.keys?.memoPubkey
         },
         token: "HIVE",
         payment_addr: invoiceData?.payment_addr,
@@ -284,15 +287,15 @@ const Onboard = (props: Props) => {
         payment_request: invoiceData?.payment_request,
         r_hash: invoiceData?.r_hash,
         v4vMemo: invoiceData?.memo,
-        satsAmount: invoiceData?.amount,
+        satsAmount: invoiceData?.amount
       };
-  
+
       const getAcc = await getLightning(data);
       console.log("lightning acc created:", getAcc);
     } catch (error) {
       console.error("error creating lightning acc:", error);
     }
-  };  
+  };
 
   const downloadKeys = async () => {
     if (accountInfo) {
@@ -662,14 +665,12 @@ const Onboard = (props: Props) => {
       <Theme global={props.global} />
       <Feedback activeUser={props.activeUser} />
       <NavBar history={props.history} />
-      {props.match.params.type === "asking" && props.match.params.secret && (
-        status === "account_created" ? (
+      {props.match.params.type === "asking" &&
+        props.match.params.secret &&
+        (status === "account_created" ? (
           <div className="creating-confirm asking asking-body p-4 text-center">
             <h2 className="align-self-center">✅ Account Created successfully</h2>
-            <Link
-              to={`/@${decodedInfo?.username}`}
-              className="align-self-center"
-            >
+            <Link to={`/@${decodedInfo?.username}`} className="align-self-center">
               Visit @{decodedInfo?.username}'s profile
             </Link>
             <BubbleSprinkle />
@@ -717,10 +718,7 @@ const Onboard = (props: Props) => {
                       </span>
                     </Tooltip>
                     <Tooltip content={_t("onboard.regenerate-password")}>
-                      <span
-                        className="onboard-svg"
-                        onClick={() => initAccountKey()}
-                      >
+                      <span className="onboard-svg" onClick={() => initAccountKey()}>
                         {regenerateSvg}
                       </span>
                     </Tooltip>
@@ -757,9 +755,7 @@ const Onboard = (props: Props) => {
                           </>
                         ) : (
                           <span>
-                            <a href={onboardUrl + secret}>
-                              {_t("onboard.click-link")}
-                            </a>
+                            <a href={onboardUrl + secret}>{_t("onboard.click-link")}</a>
                           </span>
                         )}
                       </Alert>
@@ -794,8 +790,7 @@ const Onboard = (props: Props) => {
               </div>
             </div>
           </div>
-        )
-      )}
+        ))}
 
       {props.match?.params?.type === "creating" && props.match?.params?.secret && (
         <div className="onboard-container">
@@ -803,7 +798,9 @@ const Onboard = (props: Props) => {
             status === "account_created" ? (
               <div className="creating-confirm asking asking-body p-4 text-center">
                 <h2 className="align-self-center">✅ Account Created successfully</h2>
-                <Link to={`/@${decodedInfo!.username}`} className="align-self-center">Visit @{decodedInfo!.username}`s profile</Link>
+                <Link to={`/@${decodedInfo!.username}`} className="align-self-center">
+                  Visit @{decodedInfo!.username}`s profile
+                </Link>
                 <BubbleSprinkle />
               </div>
             ) : (
@@ -812,14 +809,15 @@ const Onboard = (props: Props) => {
                   {_t("onboard.confirm-details")}
                 </h3>
 
-                {confirmDetails && confirmDetails.map((field, index) => (
-                  <span key={index}>
-                    {field.label}
-                    <strong style={{ wordBreak: "break-word", marginLeft: "10px" }}>
-                      {field.value}
-                    </strong>
-                  </span>
-                ))}
+                {confirmDetails &&
+                  confirmDetails.map((field, index) => (
+                    <span key={index}>
+                      {field.label}
+                      <strong style={{ wordBreak: "break-word", marginLeft: "10px" }}>
+                        {field.value}
+                      </strong>
+                    </span>
+                  ))}
 
                 {/* RC delegation section */}
                 <div className="onboard-delegate-rc">
@@ -832,15 +830,14 @@ const Onboard = (props: Props) => {
                         onChange={() => setChecked(!isChecked)}
                       />
                       <span className="onboard-blinking-text">
-                        {_t("onboard.rc-to-new-acc")} {decodedInfo?.username} {_t("onboard.minimum-rc")}
+                        {_t("onboard.rc-to-new-acc")} {decodedInfo?.username}{" "}
+                        {_t("onboard.minimum-rc")}
                       </span>
                     </div>
 
                     {isChecked && (
                       <div className="mt-3">
-                        {rcAmount && rcError && (
-                          <span className="text-danger mt-3">{rcError}</span>
-                        )}
+                        {rcAmount && rcError && <span className="text-danger mt-3">{rcError}</span>}
                         <InputGroup>
                           <FormControl
                             type="text"
@@ -906,7 +903,7 @@ const Onboard = (props: Props) => {
                       Pay with bitcoin lightning
                     </Button>
                     {invoiceData && (
-                       <>
+                      <>
                         <p>Scan QR to complete payment</p>
                         <QRCode
                           size={256}
@@ -914,7 +911,7 @@ const Onboard = (props: Props) => {
                           value={`lightning:${invoiceData?.payment_request}`}
                           viewBox={`0 0 256 256`}
                         />
-                       </>
+                      </>
                     )}
                   </div>
                 </div>

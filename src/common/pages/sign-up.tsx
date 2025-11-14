@@ -177,7 +177,7 @@ export const SignUp = (props: PageProps) => {
 
   useEffect(() => {
     initiateAccount();
-    console.log(props.global)
+    console.log(props.global);
   }, []);
 
   // const regularRegister = async () => {
@@ -331,7 +331,11 @@ export const SignUp = (props: PageProps) => {
                 <div className="form-title">{_t("sign-up.header")}</div>
                 <div className="form-sub-title">{_t("sign-up.description")}</div>
                 <div className="flex items-center justify-center form-icons">
-                 <img src={`https://images.hive.blog/u/${props.global.hive_id}/avatar`} alt="Ecency" title="Ecency" />
+                  <img
+                    src={`https://images.hive.blog/u/${props.global.hive_id}/avatar`}
+                    alt="Ecency"
+                    title="Ecency"
+                  />
                   <span title="Hive">{hiveSvg}</span>
                 </div>
 
@@ -396,7 +400,7 @@ export const SignUp = (props: PageProps) => {
                       setStage(Stage.REGISTER_TYPE);
                     }
 
-                    if ((username) || email || referral) {
+                    if (username || email || referral) {
                       encodeUrlInfo(username, email, referral);
                     }
                   }}
@@ -417,7 +421,7 @@ export const SignUp = (props: PageProps) => {
                     <small className="text-red pl-3">{usernameError}</small>
                   </div>
                   {/* <div className="mb-4"> */}
-                    {/* <FormControl
+                  {/* <FormControl
                       type="email"
                       placeholder={_t("sign-up.email")}
                       value={email}
