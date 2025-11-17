@@ -32,6 +32,7 @@ import activeUser from "../store/active-user";
 import { generatePassword, getPrivateKeys } from "../helper/onBoard-helper";
 import QRCode from "react-qr-code";
 import clipboard from "../util/clipboard";
+import { copyOutlinSvg } from "../img/svg";
 
 enum Stage {
   FORM = "form",
@@ -177,7 +178,7 @@ export const SignUp = (props: PageProps) => {
 
   useEffect(() => {
     initiateAccount();
-    console.log(props.global)
+    console.log(props.global);
   }, []);
 
   // const regularRegister = async () => {
@@ -331,7 +332,11 @@ export const SignUp = (props: PageProps) => {
                 <div className="form-title">{_t("sign-up.header")}</div>
                 <div className="form-sub-title">{_t("sign-up.description")}</div>
                 <div className="flex items-center justify-center form-icons">
-                 <img src={`https://images.hive.blog/u/${props.global.hive_id}/avatar`} alt="Ecency" title="Ecency" />
+                  <img
+                    src={`https://images.hive.blog/u/${props.global.hive_id}/avatar`}
+                    alt="Ecency"
+                    title="Ecency"
+                  />
                   <span title="Hive">{hiveSvg}</span>
                 </div>
 
@@ -396,7 +401,7 @@ export const SignUp = (props: PageProps) => {
                       setStage(Stage.REGISTER_TYPE);
                     }
 
-                    if ((username) || email || referral) {
+                    if (username || email || referral) {
                       encodeUrlInfo(username, email, referral);
                     }
                   }}
@@ -417,7 +422,7 @@ export const SignUp = (props: PageProps) => {
                     <small className="text-red pl-3">{usernameError}</small>
                   </div>
                   {/* <div className="mb-4"> */}
-                    {/* <FormControl
+                  {/* <FormControl
                       type="email"
                       placeholder={_t("sign-up.email")}
                       value={email}
@@ -554,36 +559,70 @@ export const SignUp = (props: PageProps) => {
             )} */}
 
             {stage === Stage.REGISTER_TYPE && (
-              <div className="card border bg-white border-[--border-color] rounded mb-3">
-                <div className="bg-gray-100 dark:bg-gray-800 border-b border-[--border-color] p-3">
-                  <b>
-                    Click or scan QR code to continue
-                    {/* {props.activeUser
+              <>
+                {/* <b>Make sure you have keychain extension installed on your desktop browser</b>
+              <b>Make sure you have keychain extension installed on your desktop browser</b> */}
+                <div className="card border bg-white border-[--border-color] rounded">
+                  <div className="bg-gray-100 dark:bg-gray-800 border-b border-[--border-color] p-3">
+                    <b>
+                      1. Click QR code to continue(if you are on desktop browser, <br />
+                      make sure you have keychain extension installed)
+                      <br />
+                      OR
+                      <br />
+                      Scan with a QR code scanner(Both mobile and desktop users)
+                      {/* {props.activeUser
                       ? _t("onboard.title-active-user")
                       : _t("onboard.title-visitor")} */}
-                  </b>
-                </div>
-                <Link to={`/onboard-friend/asking/${urlHash}`}>
-                  <QRCode
-                    size={256}
-                    style={{
-                      height: "auto",
-                      maxWidth: "100%",
-                      width: "100%"
-                    }}
-                    value={`${window.origin}/onboard-friend/${urlHash}`}
-                    viewBox={`0 0 256 256`}
-                  />
-                </Link>
-                <div className="bg-gray-100 dark:bg-gray-800 border-t border-[--border-color] py-2 px-3">
-                  Scan with hive keychain mobile app
+                    </b>
+                  </div>
+                  <div className="bg-gray-100 dark:bg-gray-800 border-b border-[--border-color] p-3">
+                    <b>
+                      2. If you have sacanned the QR code,
+                      <br />
+                      paste the link to hive keychain mobile app browser
+                    </b>
+                  </div>
+                  <Link to={`/onboard-friend/asking/${urlHash}`}>
+                    <QRCode
+                      size={256}
+                      style={{
+                        height: "70%",
+                        maxWidth: "100%",
+                        width: "100%"
+                      }}
+                      value={`${window.origin}/onboard-friend/asking/${urlHash}`}
+                      // viewBox={`0 0 256 256`}
+                    />
+                  </Link>
+                  {/* <div className="bg-gray-100 dark:bg-gray-800 border-t border-[--border-color] py-2 px-3"> */}
+                  {/* <b>
+                    If you have sacanned the QR code, 
+                    <br />
+                    paste the link to hive keychain mobile app browser
+                  </b> */}
                   {/* <Link to={`/onboard-friend/asking/${urlHash}`}>
                     <Button className="w-full">
                       {props.activeUser ? _t("onboard.creating") : _t("onboard.asking")}
                     </Button>
                   </Link> */}
+                  {/* </div> */}
+                  <div
+                    style={{
+                      cursor: "pointer",
+                      alignSelf: "center",
+                      textAlign: "center",
+                      marginTop: "10px"
+                    }}
+                    onClick={() => {
+                      clipboard(`${window.origin}/onboard-friend/asking/${urlHash}`);
+                      success("Link copied to clipboard");
+                    }}
+                  >
+                    Click here to copy QR code link {copyOutlinSvg}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             {/* {stage === Stage.REGISTER_TYPE && <Link to={`/onboard-friend/asking/${urlHash}`}>
