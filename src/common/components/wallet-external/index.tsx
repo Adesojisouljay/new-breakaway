@@ -49,6 +49,13 @@ import { QueryIdentifiers } from "../../core";
 import { claimBaPoints, getBaUserPoints } from "../../api/breakaway";
 import axios, { AxiosResponse } from "axios";
 import { getCommunity } from "../../api/bridge";
+import { Button } from "react-bootstrap";
+import { ExternalWalletSetUp } from "../set-up-external-wallet";
+import { deriveAddresses, generateMnemonic, getWalletInfo } from "../../api/external-wallets";
+import { buildHiveWalletTokens } from "../../helper/external-wallet";
+import { updateHiveMetadataWithKeychain } from "../../api/operations";
+import { WalletReceiveModal } from "../wallet-external-modal/receive";
+import { WalletSendModal } from "../wallet-external-modal/send";
 
 export const formatMemo = (memo: string, history: History) => {
   return memo.split(" ").map((x) => {
@@ -168,7 +175,7 @@ interface Props {
   dynamicProps: DynamicProps;
   history: History;
   activeUser: ActiveUser | null;
-  account: Account;
+  account: Account | any;
   signingKey: string;
   transactions: Transactions;
   updateWalletValues: () => void;
@@ -188,102 +195,153 @@ interface State {
 }
 
 export const ExternalWallet = (props: Props) => {
-  const [tokens] = useState([
-    {
-      name: "Bitcoin",
-      symbol: "Btc",
-      logo: "https://www.shutterstock.com/image-vector/bitcoin-logo-bright-orange-color-600nw-2650281747.jpg",
-      balance: 0.532,
-      address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
-    },
-    {
-      name: "Ethereum",
-      symbol: "Eth",
-      logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQzpOeejeflUbdeY5CMy6nSFg4F1zJfKqm9eQ&s",
-      balance: 152.44,
-      address: "hive1234567890abc"
-    },
-    {
-      name: "Solana",
-      symbol: "Sol",
-      logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRTOOhDi1KrwwS7G_H1yvSkMoiPhO3anGP8_w&s",
-      balance: 89.22,
-      address: "hbd987654321"
-    },
-    {
-      name: "TON",
-      symbol: "Ton",
-      logo: "https://assets.streamlinehq.com/image/private/w_300,h_300,ar_1/f_auto/v1/icons/logos/ton-n6irzxxx7vrdcd9gb6gbbv.png/ton-gib1fdan9k9u3ii01dvg5.png?_a=DATAg1AAZAA0",
-      balance: 89.22,
-      address: "hbd987654321"
-    },
-    {
-      name: "TRX",
-      symbol: "trx",
-      logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBsWaz0K2kxYpSFMhQ2pPdBcnOwpQHWYEyzw&s",
-      balance: 89.22,
-      address: "hbd987654321"
-    },
-    {
-      name: "Binance coin",
-      symbol: "Bnb",
-      logo: "https://cdn.dribbble.com/userupload/43073794/file/original-e23b619cd2fb9d96b1035a7224546f45.jpg?resize=400x0",
-      balance: 89.22,
-      address: "hbd987654321"
-    },
-    {
-      name: "APTOS",
-      symbol: "Aptos",
-      logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQo-QpHAdPqO2fRTNaInm3BC9EJ6alO84heYA&s",
-      balance: 89.22,
-      address: "hbd987654321"
-    },
-    {
-      name: "POLYGON",
-      symbol: "Matc",
-      logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-UjZYpTKlVQWhKF3Sf3camP-rCTZ_OZnqcA&s",
-      balance: 89.22,
-      address: "hbd987654321"
-    }
-  ]);
+  const [walletInfo, setWalletInfo] = useState<any[]>([]);
+  const [isExternal, setIsExternal] = useState(false);
+  const [mnemonic, setMnemonic] = useState("");
+  const [wallets, setWallets] = useState<any>(null);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [selectedToken, setSelectedToken] = useState<string>("");
+  const [showSendModal, setShowSendModal] = useState(false);
 
-  const { global, activeUser, account, history, updateActiveUser } = props;
-
-  // const isMyPage = activeUser && activeUser.username === account.name;
-
+  const { global, activeUser, account } = props;
   const isMyPage = activeUser && activeUser.username === account.name;
 
+  // Fetch wallets when tokens become available
+  useEffect(() => {
+    const fetchWallets = async () => {
+      if (!account?.profile?.tokens) return;
+      console.log("object...account", account);
+      try {
+        const data = await getWalletInfo(account.profile.tokens);
+        setWalletInfo(data.wallets || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchWallets();
+  }, [account?.profile?.tokens]);
+
+  const handleGenerate = async () => {
+    try {
+      const res: any = await generateMnemonic();
+      setMnemonic(res?.mnemonic || res?.data?.mnemonic || "");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleVerifyAndDerive = async () => {
+    try {
+      const res: any = await deriveAddresses(mnemonic);
+      const w = res?.wallets || res?.data?.wallets || [];
+      setWallets(w);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const saveUserWalletToHive = async (username: string, wallets: any) => {
+    const tokens = buildHiveWalletTokens(wallets);
+    const result = await updateHiveMetadataWithKeychain(username, tokens);
+    console.log("Hive updated:", result);
+  };
+
   return (
-    <>
-      <div className="wallet-ecency">
-        <div className="wallet-main">
+    <div className="wallet-ecency">
+      <div className="wallet-main">
+        {account?.profile?.tokens && walletInfo.length > 0 ? (
           <div className="coin-wrapper">
-            {tokens.map((token) => (
+            {walletInfo.map((token: any) => (
               <div className="token-card" key={token.symbol}>
                 <div className="token-info">
-                  <img src={token.logo} alt={token.name} className="token-logo" />
-                  <div>
-                    <div className="token-name">{token.name}</div>
-                    <div className="token-symbol">{token.symbol}</div>
+                  <div className="token-image-info">
+                    <img src={token.imageUrl} alt={token.symbol} className="token-logo" />
+                    <span className="token-name">{token.symbol}</span>
+                  </div>
+                  <div className="token-stat">
+                    <span>{token.price.toFixed(2)}</span>
+                    <span style={{ color: token.change24h >= 1 ? "green" : "red" }}>
+                      ({token.change24h.toFixed(2)})
+                    </span>
                   </div>
                 </div>
 
                 <div className="token-balance">{token.balance.toFixed(3)}</div>
 
                 <div className="token-address">
-                  <span>{token.address.slice(0, 10)}...</span>
-                  copy
+                  <span>{token.address.slice(0, 23)}...</span>
+                  <span>copy</span>
                 </div>
 
-                <button className="send-btn">Send</button>
+                <div className="ext-btn-wrapper">
+                  <button
+                    className="send-btn"
+                    onClick={() => {
+                      setSelectedToken(token);
+                      setShowReceiveModal(true);
+                    }}
+                  >
+                    Receive
+                  </button>
+
+                  <button
+                    className="send-btn"
+                    disabled={true}
+                    style={{ cursor: "not-allowed" }}
+                    onClick={() => {
+                      setSelectedToken(token);
+                      setShowSendModal(true);
+                    }}
+                  >
+                    Send
+                  </button>
+                </div>
               </div>
             ))}
           </div>
+        ) : !isExternal ? (
+          <div className="coin-wrapper">
+            {isMyPage ? (
+              <Button onClick={() => setIsExternal(true)}>Click to add wallet</Button>
+            ) : (
+              <p>No external wallet added yet for this account</p>
+            )}
+          </div>
+        ) : null}
 
-          <WalletMenu global={global} username={account.name} active="ecency" />
-        </div>
+        {isExternal && (
+          <ExternalWalletSetUp
+            setisExternal={setIsExternal}
+            generateMnemonic={handleGenerate}
+            mnemonic={mnemonic}
+            setMnemonic={setMnemonic}
+            handleDerive={handleVerifyAndDerive}
+            wallets={wallets}
+            setWallets={setWallets}
+            saveUserWalletToHive={saveUserWalletToHive}
+            activeUser={activeUser}
+          />
+        )}
+
+        <WalletMenu global={global} username={account.name} active="ecency" />
       </div>
-    </>
+      <WalletReceiveModal
+        show={showReceiveModal}
+        onClose={() => setShowReceiveModal(false)}
+        selectedToken={selectedToken}
+      />
+
+      <WalletSendModal
+        show={showSendModal}
+        onClose={() => setShowSendModal(false)}
+        selectedToken={selectedToken}
+        onSend={(recipient, amount, memo) => {
+          console.log("Send token");
+          setShowSendModal(false);
+          // Call your send API here
+        }}
+      />
+    </div>
   );
 };
 

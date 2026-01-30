@@ -11,7 +11,7 @@ import {
 
 import { encodeOp, Parameters } from "hive-uri";
 
-import { client as hiveClient } from "./hive";
+import { getAccount, client as hiveClient } from "./hive";
 
 import { Account, FullAccount } from "../store/accounts/types";
 
@@ -1965,17 +1965,17 @@ export const createAccountKc = async (data: any, creator_account: string) => {
     const owner = {
       weight_threshold: 1,
       account_auths: [],
-      key_auths: [[account.ownerPublicKey, 1]]
+      key_auths: [[account.ownerPubkey, 1]]
     };
     const active = {
       weight_threshold: 1,
       account_auths: [],
-      key_auths: [[account.activePublicKey, 1]]
+      key_auths: [[account.activePubkey, 1]]
     };
     const posting = {
       weight_threshold: 1,
       account_auths: [["ecency.app", 1]],
-      key_auths: [[account.postingPublicKey, 1]]
+      key_auths: [[account.postingPubkey, 1]]
     };
     const ops: Array<any> = [];
     const params: any = {
@@ -1984,7 +1984,7 @@ export const createAccountKc = async (data: any, creator_account: string) => {
       owner,
       active,
       posting,
-      memo_key: account.memoPublicKey,
+      memo_key: account.memoPubkey,
       json_metadata: "",
       extensions: [],
       fee
@@ -2087,17 +2087,17 @@ export const createAccountKey = async (
     const owner = {
       weight_threshold: 1,
       account_auths: [],
-      key_auths: [[account.ownerPublicKey, 1]]
+      key_auths: [[account.ownerPubkey, 1]]
     };
     const active = {
       weight_threshold: 1,
       account_auths: [],
-      key_auths: [[account.activePublicKey, 1]]
+      key_auths: [[account.activePubkey, 1]]
     };
     const posting = {
       weight_threshold: 1,
       account_auths: [["ecency.app", 1]],
-      key_auths: [[account.postingPublicKey, 1]]
+      key_auths: [[account.postingPubkey, 1]]
     };
     const ops: Array<any> = [];
     const params: any = {
@@ -2106,7 +2106,7 @@ export const createAccountKey = async (
       owner,
       active,
       posting,
-      memo_key: account.memoPublicKey,
+      memo_key: account.memoPubkey,
       json_metadata: "",
       extensions: [],
       fee
@@ -2139,6 +2139,7 @@ export const createAccountWithCreditKc = async (data: any, creator_account: stri
       ...pub_keys,
       active: false
     };
+    console.log("account...ops", account);
 
     let tokens: any = await hiveClient.database.getAccounts([creator_account]);
     tokens = tokens[0]?.pending_claimed_accounts;
@@ -2149,17 +2150,17 @@ export const createAccountWithCreditKc = async (data: any, creator_account: stri
     const owner = {
       weight_threshold: 1,
       account_auths: [],
-      key_auths: [[account.ownerPublicKey, 1]]
+      key_auths: [[account.ownerPubkey, 1]]
     };
     const active = {
       weight_threshold: 1,
       account_auths: [],
-      key_auths: [[account.activePublicKey, 1]]
+      key_auths: [[account.activePubkey, 1]]
     };
     const posting = {
       weight_threshold: 1,
       account_auths: [["ecency.app", 1]],
-      key_auths: [[account.postingPublicKey, 1]]
+      key_auths: [[account.postingPubkey, 1]]
     };
     const ops: Array<any> = [];
     const params: any = {
@@ -2168,7 +2169,7 @@ export const createAccountWithCreditKc = async (data: any, creator_account: stri
       owner,
       active,
       posting,
-      memo_key: account.memoPublicKey,
+      memo_key: account.memoPubkey,
       json_metadata: "",
       extensions: []
     };
@@ -2382,3 +2383,68 @@ export const claimAccountByKeychain = (account: FullAccount) =>
     ],
     "Active"
   );
+
+export async function updateHiveMetadataWithKeychain(username: any, tokens: any) {
+  try {
+    // 1. Fetch existing metadata
+    // const apiUrl = "https://api.hive.blog";
+    // const { data } = await axios.post(apiUrl, {
+    //   jsonrpc: "2.0",
+    //   method: "condenser_api.get_accounts",
+    //   params: [[username]],
+    //   id: 1,
+    // });
+
+    console.log(username, "keycha....");
+    const data: any = getAccount(username);
+
+    console.log("data...", data);
+
+    // if (!data.result || data.result.length === 0) {
+    //   throw new Error("User not found on Hive blockchain");
+    // }
+
+    // 2. Parse existing metadata safely
+    let metadata: any = {};
+    try {
+      metadata = JSON.parse(data.result[0].posting_json_metadata || "{}");
+    } catch (e) {
+      metadata = {};
+    }
+
+    // Ensure metadata.profile exists
+    if (!metadata.profile) metadata.profile = {};
+
+    // 3. Add tokens to profile
+    metadata.profile.tokens = tokens;
+
+    // 4. Prepare broadcast
+    const operations = [
+      [
+        "account_update2",
+        {
+          account: username,
+          json_metadata: "",
+          posting_json_metadata: JSON.stringify(metadata),
+          extensions: []
+        }
+      ]
+    ];
+
+    // 5. Broadcast using Keychain
+    return new Promise((resolve, reject) => {
+      keychain.broadcast(
+        username,
+        operations,
+        "Posting"
+        // (response: any) => {
+        //   if (response.success) resolve(response);
+        //   else reject(response.message);
+        // }
+      );
+    });
+  } catch (error) {
+    console.error("Hive metadata update error:", error);
+    throw error;
+  }
+}

@@ -18,6 +18,7 @@
     border-radius: 14px;
     padding: 15px;
     display: flex;
+    width: 300px;
 
     flex-direction: column;
     transition: all 0.25s ease;
@@ -43,9 +44,16 @@
   /* Token header (logo + name) */
   .token-info {
     display: flex;
+    justify-content: space-between;
     align-items: center;
     gap: 0.8rem;
     margin-bottom: 1rem;
+
+    .token-image-info{
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
   
     .token-logo {
       width: 40px;
@@ -104,29 +112,83 @@
       }
     }
   }
-  
-  /* Send button */
-  .send-btn {
-    background: #2563eb;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    padding: 0.5rem 0;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.25s ease;
-  
-    &:hover {
-      background: #1e40af;
+
+  .ext-btn-wrapper{
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+
+    .send-btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.25s ease;
+    
+      &:hover {
+        background: #1e40af;
+      }
     }
   }
-  
-
-// .coin-wrapper{
-//     display: flex;
-//     flex: wrap;
-// }
+    
 }
 
-  
+.send-btn--disabled {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+
+///////////////
+
+
+.modal-container {
+  background: #fff;
+  padding: 20px 30px;
+  border-radius: 8px;
+  width: 350px;
+  max-width: 90%;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.modal-title {
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.modal-field {
+  margin-bottom: 12px;
+}
+
+.modal-field label {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.modal-field input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
