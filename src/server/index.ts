@@ -26,12 +26,12 @@ const cleanURL = (req: any, res: any, next: any) => {
   }
   if (req.url.includes("-hs?code")) {
     next();
-  } 
+  }
 
   ////this is forcing all url params to lower case which is causing unecessary behaviour for onbording url
   // else if (req.url !== req.url.toLowerCase() && !req.url.includes("auth?code")) {
   //   res.redirect(301, req.url.toLowerCase());
-  // } 
+  // }
   else {
     next();
   }

@@ -6,7 +6,7 @@ import { Global } from "../../store/global/types";
 
 import _c from "../../util/fix-class-names";
 
-import { hiveSvg, spkSvg } from "../../img/svg";
+import { hiveSvg, spkSvg, bitcoinLogo } from "../../img/svg";
 import { hiveEngineSvg } from "../../img/svg";
 import "./_index.scss";
 
@@ -58,6 +58,14 @@ export default class WalletMenu extends Component<Props> {
           <span className="title">SPK</span>
           <span className="sub-title">Tokens</span>
           <span className="platform-logo">{spkSvg}</span>
+        </Link>
+        <Link
+          className={_c(`menu-item spk ${active === "spk" ? "active" : ""}`)}
+          to={`/@${username}/chain`}
+        >
+          <span className="title">Web3</span>
+          <span className="sub-title">Wallet</span>
+          <span className="platform-logo">{bitcoinLogo}</span>
         </Link>
       </div>
     );

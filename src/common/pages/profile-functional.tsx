@@ -25,6 +25,7 @@ import ProfileReferrals from "../components/profile-referrals";
 import WalletHive from "../components/wallet-hive";
 import WalletHiveEngine from "../components/wallet-hive-engine";
 import WalletEcency from "../components/wallet-ecency";
+import ExternalWallet from "../components/wallet-external";
 import ScrollToTop from "../components/scroll-to-top";
 import SearchListItem from "../components/search-list-item";
 import SearchBox from "../components/search-box";
@@ -479,6 +480,9 @@ export const Profile = (props: Props) => {
                 }
                 if (section === "points") {
                   return WalletEcency({ ...props, account, updateWalletValues: ensureAccount });
+                }
+                if (section === "chain") {
+                  return ExternalWallet({ ...props, account, updateWalletValues: ensureAccount });
                 }
                 if (section === "communities") {
                   return ProfileCommunities({ ...props, account });

@@ -39,6 +39,11 @@ import { Alert } from "@ui/alert";
 import QRCode from "react-qr-code";
 import { getInvoice, getLightning, getAccountStatus } from "../api/breakaway";
 import OrDivider from "../components/or-divider";
+import { ExternalWallet } from "../components/wallet-external";
+import { ExternalWalletSetUp } from "../components/set-up-external-wallet";
+import { deriveAddresses, generateMnemonic } from "../api/external-wallets";
+import { buildHiveWalletTokens } from "../helper/external-wallet";
+import { updateHiveMetadataWithKeychain } from "../api/operations";
 
 export interface AccountInfo {
   email: string;
@@ -110,8 +115,12 @@ const Onboard = (props: Props) => {
   const [transferAmount, setTransferAmount] = useState(0);
   const [customJsonAmount, setCustomJsonAmount] = useState(0);
   const [invoiceData, setInvoiceData] = useState<any>(null);
-  const [status, setStatus] = useState<"checking" | "pending" | "paid" | "account_created" | "notfound">("checking");
-  const [bubbles, setBubbles] = useState<any>()
+  const [status, setStatus] = useState<
+    "checking" | "pending" | "paid" | "account_created" | "notfound"
+  >("checking");
+  const [isExternal, setisExternal] = useState<any>(true);
+  const [mnemonic, setMnemonic] = useState("");
+  const [wallets, setWallets] = useState<any>(null);
 
   useEffect(() => {
     setOnboardUrl(`${window.location.origin}/onboard-friend/creating/`);
@@ -127,10 +136,10 @@ const Onboard = (props: Props) => {
   }, []);
 
   useEffect(() => {
-    if (props.match.params.type == "asking") {
+    if (props.match.params.type == "asking" || props.match.params.type == "creating") {
       initAccountKey();
     }
-    console.log(accountInfo?.username)
+    // console.log(accountInfo?.username);
   }, [accountInfo?.username]);
 
   useEffect(() => {
@@ -138,19 +147,21 @@ const Onboard = (props: Props) => {
     (activeUser?.data as FullAccount) &&
       (activeUser?.data as FullAccount).pending_claimed_accounts &&
       setAccountCredit((activeUser?.data as FullAccount).pending_claimed_accounts);
+    console.log("active user......", activeUser);
   }, [props.activeUser]);
 
   useEffect(() => {
-    if (decodedInfo) {
+    // console.log("decodedInfo..", decodedInfo)
+    if (accountInfo) {
       setConfirmDetails([
-        { label: _t("onboard.username"), value: formatUsername(decodedInfo!.username) },
-        { label: _t("onboard.public-owner"), value: decodedInfo?.pubkeys?.ownerPublicKey },
-        { label: _t("onboard.public-active"), value: decodedInfo?.pubkeys?.activePublicKey },
-        { label: _t("onboard.public-posting"), value: decodedInfo?.pubkeys?.postingPublicKey },
-        { label: _t("onboard.public-memo"), value: decodedInfo?.pubkeys?.memoPublicKey }
+        { label: _t("onboard.username"), value: formatUsername(accountInfo!?.username) },
+        { label: _t("onboard.public-owner"), value: accountInfo?.keys?.ownerPubkey },
+        { label: _t("onboard.public-active"), value: accountInfo?.keys?.activePubkey },
+        { label: _t("onboard.public-posting"), value: accountInfo?.keys?.postingPubkey },
+        { label: _t("onboard.public-memo"), value: accountInfo?.keys?.memoPubkey }
       ]);
     }
-  }, [decodedInfo]);
+  }, [accountInfo]);
 
   useEffect(() => {
     window.addEventListener("resize", handleResize);
@@ -171,23 +182,18 @@ const Onboard = (props: Props) => {
   }, [isChecked]);
 
   useEffect(() => {
-    console.log("...v...")
-    console.log("...v...", decodedInfo?.username, accountInfo?.username)
-    
     if (!decodedInfo?.username) return;
 
     const interval = setInterval(async () => {
       try {
         const res = await getAccountStatus(decodedInfo?.username);
-        console.log("res..res..res", res)
 
-          if(res.status === "pending") {
+        if (res.status === "pending") {
           setStatus(res.status || "pending");
-          }
-         else if (res.status === "account_created") {
-            setStatus("account_created");
-            clearInterval(interval); // stop polling once done
-          }
+        } else if (res.status === "account_created") {
+          setStatus("account_created");
+          clearInterval(interval); // stop polling once done
+        }
         // }
       } catch (err) {
         console.error("Error checking account status:", err);
@@ -196,6 +202,39 @@ const Onboard = (props: Props) => {
 
     return () => clearInterval(interval);
   }, [decodedInfo]);
+
+  const handleGenerate = async () => {
+    try {
+      const res: any = await generateMnemonic();
+      if (res?.mnemonic || res?.data?.mnemonic) {
+        const m = res.mnemonic || res.data.mnemonic;
+        setMnemonic(m);
+      } else {
+        throw new Error("Invalid mnemonic response");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleVerifyAndDerive = async () => {
+    try {
+      const res = await deriveAddresses(mnemonic);
+      // support both res.wallets and res.data.wallets
+      const w = res?.wallets ?? res?.data?.wallets ?? (res?.success && res);
+      console.log("wallets....", w);
+
+      setWallets(w);
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
+
+  const saveUserWalletToHive = async (username: any, wallets: any) => {
+    const tokens = buildHiveWalletTokens(wallets);
+    const result = await updateHiveMetadataWithKeychain(username, tokens);
+    console.log("Hive updated:", result);
+  };
 
   const handleResize = () => {
     setInnerWidth(window.innerWidth);
@@ -241,7 +280,7 @@ const Onboard = (props: Props) => {
         keys
       };
 
-      console.log("object...", accInfo)
+      // console.log("object...", accInfo);
       setAccountInfo(accInfo);
       setMasterPassword(masterPassword);
       return masterPassword;
@@ -266,17 +305,19 @@ const Onboard = (props: Props) => {
 
   const getLightningAcc = async () => {
     try {
+      // console.log("object...", accountInfo);
+      const invoiceData = await getInvoice(
+        setInvoiceData,
+        accountInfo?.username || decodedInfo!?.username
+      );
 
-      console.log("object...", accountInfo)
-      const invoiceData = await getInvoice(setInvoiceData, accountInfo?.username || decodedInfo!?.username)
-   
       const data = {
         username: decodedInfo!?.username || accountInfo?.username,
         accountKeys: {
           ownerPubkey: decodedInfo?.pubkeys?.ownerPublicKey || accountInfo?.keys?.ownerPubkey,
           activePubkey: decodedInfo?.pubkeys?.activePublicKey || accountInfo?.keys?.activePubkey,
           postingPubkey: decodedInfo?.pubkeys?.postingPublicKey || accountInfo?.keys?.postingPubkey,
-          memoPubkey: decodedInfo?.pubkeys?.memoPublicKey || accountInfo?.keys?.memoPubkey,
+          memoPubkey: decodedInfo?.pubkeys?.memoPublicKey || accountInfo?.keys?.memoPubkey
         },
         token: "HIVE",
         payment_addr: invoiceData?.payment_addr,
@@ -284,15 +325,15 @@ const Onboard = (props: Props) => {
         payment_request: invoiceData?.payment_request,
         r_hash: invoiceData?.r_hash,
         v4vMemo: invoiceData?.memo,
-        satsAmount: invoiceData?.amount,
+        satsAmount: invoiceData?.amount
       };
-  
+
       const getAcc = await getLightning(data);
       console.log("lightning acc created:", getAcc);
     } catch (error) {
       console.error("error creating lightning acc:", error);
     }
-  };  
+  };
 
   const downloadKeys = async () => {
     if (accountInfo) {
@@ -349,14 +390,22 @@ const Onboard = (props: Props) => {
   };
 
   const onKc = async (type: string) => {
+    // console.log("onboarding username....... decodedInfo...", decodedInfo)
     const { activeUser, dynamicProps } = props;
+
+    const accountKeys: any = {
+      ownerPubkey: decodedInfo?.pubkeys?.ownerPublicKey || accountInfo?.keys?.ownerPubkey,
+      activePubkey: decodedInfo?.pubkeys?.activePublicKey || accountInfo?.keys?.activePubkey,
+      postingPubkey: decodedInfo?.pubkeys?.postingPublicKey || accountInfo?.keys?.postingPubkey,
+      memoPubkey: decodedInfo?.pubkeys?.memoPublicKey || accountInfo?.keys?.memoPubkey
+    };
     if (activeUser) {
       try {
         if (type === createOptions.HIVE) {
           const resp = await createAccountKc(
             {
-              username: formatUsername(decodedInfo!.username),
-              pub_keys: decodedInfo?.pubkeys,
+              username: formatUsername(accountInfo!?.username),
+              pub_keys: accountKeys,
               fee: dynamicProps.accountCreationFee
             },
             activeUser?.username
@@ -368,7 +417,7 @@ const Onboard = (props: Props) => {
             if (isChecked) {
               await delegateRC(
                 activeUser?.username,
-                formatUsername(decodedInfo!.username),
+                formatUsername(accountInfo!?.username),
                 rcAmount * 1e9
               );
             }
@@ -378,19 +427,20 @@ const Onboard = (props: Props) => {
         } else {
           const resp = await createAccountWithCreditKc(
             {
-              username: formatUsername(decodedInfo!.username),
-              pub_keys: decodedInfo?.pubkeys
+              username: formatUsername(accountInfo!?.username),
+              pub_keys: accountKeys
             },
             activeUser?.username
           );
           if (resp.success == true) {
             setInprogress(false);
             setStep("success");
+            // await saveUserWalletToHive(accountInfo!?.username, wallets)
             sendMail();
             if (isChecked) {
               await delegateRC(
                 activeUser?.username,
-                formatUsername(decodedInfo!.username),
+                formatUsername(accountInfo!?.username),
                 rcAmount * 1e9
               );
             }
@@ -612,12 +662,12 @@ const Onboard = (props: Props) => {
           <div className="success-dialog-content">
             <span>
               {_t("onboard.success-message")}{" "}
-              <strong>{formatUsername(decodedInfo!.username)}</strong>
+              <strong>{formatUsername(decodedInfo!?.username)}</strong>
             </span>
           </div>
           <div className="flex justify-center">
             <span className="hr-6px-btn-spacer" />
-            <Link to={`/@${formatUsername(decodedInfo!.username)}`}>
+            <Link to={`/@${formatUsername(decodedInfo!?.username)}`}>
               <Button className="mt-3 w-[50%] align-self-center" onClick={finish}>
                 {_t("g.finish")}
               </Button>
@@ -662,119 +712,263 @@ const Onboard = (props: Props) => {
       <Theme global={props.global} />
       <Feedback activeUser={props.activeUser} />
       <NavBar history={props.history} />
-      {props.match.params.type === "asking" && props.match.params.secret && (
-        status === "account_created" ? (
-          <div className="creating-confirm asking asking-body p-4 text-center">
-            <h2 className="align-self-center">✅ Account Created successfully</h2>
-            <Link
-              to={`/@${decodedInfo?.username}`}
-              className="align-self-center"
-            >
-              Visit @{decodedInfo?.username}'s profile
-            </Link>
-            <BubbleSprinkle />
-          </div>
-        ) : (
-          <div className="onboard-container">
-            <div className="asking">
-              <div
-                className={`asking-body flex mb-0 self-center flex-col ${
-                  innerWidth < 577 ? "p-3" : "p-5"
-                }`}
-              >
-                <h3 className="mb-3 self-center text-2xl font-semibold text-blue-dark-sky">
-                  {_t("onboard.confirm-details")}
-                </h3>
 
-                <div className="reg-details">
-                  <span style={{ lineHeight: 2 }}>
-                    {_t("onboard.username")} <strong>{accountInfo?.username}</strong>
-                  </span>
-                  <span style={{ lineHeight: 2 }}>
-                    {_t("onboard.email")} <strong>{accountInfo?.email}</strong>
-                  </span>
-                  <span style={{ lineHeight: 2 }}>
-                    {_t("onboard.referral")} <strong>{accountInfo?.referral}</strong>
-                  </span>
-                </div>
-
-                <span className="mt-3">{_t("onboard.copy-key")}</span>
-
-                <div className="mt-3 flex flex-col items-center">
-                  <div className="flex">
-                    <span className="mr-3 mt-1">
-                      {innerWidth <= 768 ? shortPassword + "..." : masterPassword}
-                    </span>
-                    <Tooltip content={_t("onboard.copy-tooltip")}>
-                      <span
-                        className="onboard-svg mr-3"
-                        onClick={() => {
-                          clipboard(masterPassword);
-                          success(_t("onboard.copy-password"));
-                        }}
-                      >
-                        {copyContent}
-                      </span>
-                    </Tooltip>
-                    <Tooltip content={_t("onboard.regenerate-password")}>
-                      <span
-                        className="onboard-svg"
-                        onClick={() => initAccountKey()}
-                      >
-                        {regenerateSvg}
-                      </span>
-                    </Tooltip>
-                  </div>
-
-                  <Button
-                    className="self-center mt-3"
-                    disabled={!accountInfo?.username}
-                    onClick={() => downloadKeys()}
-                    icon={downloadSvg}
+      {isExternal && props.match.params.type !== "asking" ? (
+        <div>
+          <ExternalWalletSetUp
+            setisExternal={setisExternal}
+            generateMnemonic={handleGenerate}
+            mnemonic={mnemonic}
+            setMnemonic={setMnemonic}
+            handleDerive={handleVerifyAndDerive}
+            saveUserWalletToHive={saveUserWalletToHive}
+            wallets={wallets}
+            setWallets={setWallets}
+          />
+        </div>
+      ) : (
+        <>
+          {props.match.params.type === "asking" &&
+            props.match.params.secret &&
+            (status === "account_created" ? (
+              <div className="creating-confirm asking asking-body p-4 text-center">
+                <h2 className="align-self-center">✅ Account Created successfully</h2>
+                <Link to={`/@${decodedInfo?.username}`} className="align-self-center">
+                  Visit @{decodedInfo?.username}'s profile
+                </Link>
+                <BubbleSprinkle />
+              </div>
+            ) : (
+              <div className="onboard-container">
+                <div className="asking">
+                  <div
+                    className={`asking-body flex mb-0 self-center flex-col ${
+                      innerWidth < 577 ? "p-3" : "p-5"
+                    }`}
                   >
-                    {_t("onboard.download-keys")}
-                  </Button>
+                    <h3 className="mb-3 self-center text-2xl font-semibold text-blue-dark-sky">
+                      {_t("onboard.confirm-details")}
+                    </h3>
 
-                  {fileIsDownloaded && (
-                    <>
-                      <Alert className="flex flex-col self-center justify-center mt-3">
-                        {!props.activeUser ? (
-                          <>
-                            <h4>{_t("onboard.copy-info-message")}</h4>
-                            <div className="flex items-center">
-                              <span>{splitUrl(onboardUrl + secret)}...</span>
-                              <span
-                                style={{ width: "5%" }}
-                                className="onboard-svg"
-                                onClick={() => {
-                                  clipboard(onboardUrl + secret);
-                                  success(_t("onboard.copy-link"));
-                                }}
-                              >
-                                {copyContent}
+                    <div className="reg-details">
+                      <span style={{ lineHeight: 2 }}>
+                        {_t("onboard.username")} <strong>{accountInfo?.username}</strong>
+                      </span>
+                      <span style={{ lineHeight: 2 }}>
+                        {_t("onboard.email")} <strong>{accountInfo?.email}</strong>
+                      </span>
+                      <span style={{ lineHeight: 2 }}>
+                        {_t("onboard.referral")} <strong>{accountInfo?.referral}</strong>
+                      </span>
+                    </div>
+
+                    <span className="mt-3">{_t("onboard.copy-key")}</span>
+
+                    <div className="mt-3 flex flex-col items-center">
+                      <div className="flex">
+                        <span className="mr-3 mt-1">
+                          {innerWidth <= 768 ? shortPassword + "..." : masterPassword}
+                        </span>
+                        <Tooltip content={_t("onboard.copy-tooltip")}>
+                          <span
+                            className="onboard-svg mr-3"
+                            onClick={() => {
+                              clipboard(masterPassword);
+                              success(_t("onboard.copy-password"));
+                            }}
+                          >
+                            {copyContent}
+                          </span>
+                        </Tooltip>
+                        <Tooltip content={_t("onboard.regenerate-password")}>
+                          <span className="onboard-svg" onClick={() => initAccountKey()}>
+                            {regenerateSvg}
+                          </span>
+                        </Tooltip>
+                      </div>
+
+                      <Button
+                        className="self-center mt-3"
+                        disabled={!accountInfo?.username}
+                        onClick={() => downloadKeys()}
+                        icon={downloadSvg}
+                      >
+                        {_t("onboard.download-keys")}
+                      </Button>
+
+                      {fileIsDownloaded && (
+                        <>
+                          <Alert className="flex flex-col self-center justify-center mt-3">
+                            {!props.activeUser ? (
+                              <>
+                                <h4>{_t("onboard.copy-info-message")}</h4>
+                                <div className="flex items-center">
+                                  <span>{splitUrl(onboardUrl + secret)}...</span>
+                                  <span
+                                    style={{ width: "5%" }}
+                                    className="onboard-svg"
+                                    onClick={() => {
+                                      clipboard(onboardUrl + secret);
+                                      success(_t("onboard.copy-link"));
+                                    }}
+                                  >
+                                    {copyContent}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <span>
+                                <Link to={`/onboard-friend/creating/${secret}`}>
+                                  {_t("onboard.click-link")}
+                                </Link>
+                                {/* <a href={onboardUrl + secret}>{_t("onboard.click-link")}</a> */}
+                              </span>
+                            )}
+                          </Alert>
+
+                          {/* <OrDivider />
+
+                        <div className="qr-section">
+                          <h4>Pay with bitcoin lightning</h4>
+                          <Button
+                            className="align-self-center"
+                            onClick={async () => {
+                              await getLightningAcc();
+                            }}
+                          >
+                            Click to get lightning QR
+                          </Button>
+                          {invoiceData && (
+                            <>
+                              <p>Scan QR to complete payment</p>
+                              <QRCode
+                                size={256}
+                                style={{ height: "300px", width: "300px" }}
+                                value={`lightning:${invoiceData?.payment_request}`}
+                                viewBox={`0 0 256 256`}
+                              />
+                            </>
+                          )}
+                        </div> */}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+          {props.match.params.type === "creating" && props.match?.params?.secret && (
+            <div className="onboard-container">
+              {props.activeUser ? (
+                status === "account_created" ? (
+                  <div className="creating-confirm asking asking-body p-4 text-center">
+                    <h2 className="align-self-center">✅ Account Created successfully</h2>
+                    <Link to={`/@${decodedInfo!.username}`} className="align-self-center">
+                      Visit @{decodedInfo!.username}`s profile
+                    </Link>
+                    <BubbleSprinkle />
+                  </div>
+                ) : (
+                  <div className="creating-confirm asking asking-body p-4">
+                    <h3 className="align-self-center text-2xl font-semibold text-blue-dark-sky">
+                      {_t("onboard.confirm-details")}
+                    </h3>
+
+                    {confirmDetails &&
+                      confirmDetails.map((field, index) => (
+                        <span key={index}>
+                          {field.label}
+                          <strong style={{ wordBreak: "break-word", marginLeft: "10px" }}>
+                            {field.value}
+                          </strong>
+                        </span>
+                      ))}
+
+                    {/* RC delegation section */}
+                    <div className="onboard-delegate-rc">
+                      <div className="col-span-12 sm:col-span-10">
+                        <div className="onboard-check mb-2">
+                          <input
+                            type="checkbox"
+                            className="onboard-checkbox"
+                            checked={isChecked}
+                            onChange={() => setChecked(!isChecked)}
+                          />
+                          <span className="onboard-blinking-text">
+                            {_t("onboard.rc-to-new-acc")} {accountInfo?.username}{" "}
+                            {_t("onboard.minimum-rc")}
+                          </span>
+                        </div>
+
+                        {isChecked && (
+                          <div className="mt-3">
+                            {rcAmount && rcError && (
+                              <span className="text-danger mt-3">{rcError}</span>
+                            )}
+                            <InputGroup>
+                              <FormControl
+                                type="text"
+                                placeholder={"Enter amount to delegate(Bn)"}
+                                value={rcAmount}
+                                onChange={(e) => setRcAmount(Number(e.target.value))}
+                              />
+                            </InputGroup>
+                            <div className="operation-amount d-flex mt-3">
+                              <span className="operations">
+                                {_t("onboard.posts-comments")} {commentAmount} |
+                              </span>
+                              <span className="operations">
+                                {_t("onboard.votes")} {voteAmount} |
+                              </span>
+                              <span className="operations">
+                                {_t("onboard.transfers")} {transferAmount} |
+                              </span>
+                              <span className="operations">
+                                {_t("onboard.reblogs-follows")} {customJsonAmount}
                               </span>
                             </div>
-                          </>
-                        ) : (
-                          <span>
-                            <a href={onboardUrl + secret}>
-                              {_t("onboard.click-link")}
-                            </a>
-                          </span>
+                          </div>
                         )}
-                      </Alert>
+                      </div>
+                    </div>
 
-                      {/* <OrDivider />
+                    {/* Payment options */}
+                    <div className="creating-confirm-bottom">
+                      <span>{_t("onboard.pay-fee")}</span>
+                      <div className="onboard-btn-container">
+                        <Button
+                          className="align-self-center"
+                          onClick={() => {
+                            setCreateOption("hive");
+                            setShowModal(true);
+                            setStep("sign");
+                          }}
+                        >
+                          {_t("onboard.create-account-hive")}
+                        </Button>
+                        <Button
+                          className="align-self-center"
+                          disabled={accountCredit <= 0 || (isChecked && rcError !== "")}
+                          onClick={() => {
+                            setCreateOption("credit");
+                            setShowModal(true);
+                            setStep("sign");
+                          }}
+                        >
+                          {_t("onboard.create-account-credit", { n: accountCredit })}
+                        </Button>
+                      </div>
 
+                      {/* Lightning QR */}
                       <div className="qr-section">
-                        <h4>Pay with bitcoin lightning</h4>
                         <Button
                           className="align-self-center"
                           onClick={async () => {
                             await getLightningAcc();
                           }}
                         >
-                          Click to get lightning QR
+                          Pay with bitcoin lightning
                         </Button>
                         {invoiceData && (
                           <>
@@ -787,168 +981,41 @@ const Onboard = (props: Props) => {
                             />
                           </>
                         )}
-                      </div> */}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      )}
-
-      {props.match?.params?.type === "creating" && props.match?.params?.secret && (
-        <div className="onboard-container">
-          {props.activeUser ? (
-            status === "account_created" ? (
-              <div className="creating-confirm asking asking-body p-4 text-center">
-                <h2 className="align-self-center">✅ Account Created successfully</h2>
-                <Link to={`/@${decodedInfo!.username}`} className="align-self-center">Visit @{decodedInfo!.username}`s profile</Link>
-                <BubbleSprinkle />
-              </div>
-            ) : (
-              <div className="creating-confirm asking asking-body p-4">
-                <h3 className="align-self-center text-2xl font-semibold text-blue-dark-sky">
-                  {_t("onboard.confirm-details")}
-                </h3>
-
-                {confirmDetails && confirmDetails.map((field, index) => (
-                  <span key={index}>
-                    {field.label}
-                    <strong style={{ wordBreak: "break-word", marginLeft: "10px" }}>
-                      {field.value}
-                    </strong>
-                  </span>
-                ))}
-
-                {/* RC delegation section */}
-                <div className="onboard-delegate-rc">
-                  <div className="col-span-12 sm:col-span-10">
-                    <div className="onboard-check mb-2">
-                      <input
-                        type="checkbox"
-                        className="onboard-checkbox"
-                        checked={isChecked}
-                        onChange={() => setChecked(!isChecked)}
-                      />
-                      <span className="onboard-blinking-text">
-                        {_t("onboard.rc-to-new-acc")} {decodedInfo?.username} {_t("onboard.minimum-rc")}
-                      </span>
-                    </div>
-
-                    {isChecked && (
-                      <div className="mt-3">
-                        {rcAmount && rcError && (
-                          <span className="text-danger mt-3">{rcError}</span>
-                        )}
-                        <InputGroup>
-                          <FormControl
-                            type="text"
-                            placeholder={"Enter amount to delegate(Bn)"}
-                            value={rcAmount}
-                            onChange={(e) => setRcAmount(Number(e.target.value))}
-                          />
-                        </InputGroup>
-                        <div className="operation-amount d-flex mt-3">
-                          <span className="operations">
-                            {_t("onboard.posts-comments")} {commentAmount} |
-                          </span>
-                          <span className="operations">
-                            {_t("onboard.votes")} {voteAmount} |
-                          </span>
-                          <span className="operations">
-                            {_t("onboard.transfers")} {transferAmount} |
-                          </span>
-                          <span className="operations">
-                            {_t("onboard.reblogs-follows")} {customJsonAmount}
-                          </span>
-                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-
-                {/* Payment options */}
-                <div className="creating-confirm-bottom">
-                  <span>{_t("onboard.pay-fee")}</span>
-                  <div className="onboard-btn-container">
-                    <Button
-                      className="align-self-center"
-                      onClick={() => {
-                        setCreateOption("hive");
-                        setShowModal(true);
-                        setStep("sign");
-                      }}
-                    >
-                      {_t("onboard.create-account-hive")}
-                    </Button>
-                    <Button
-                      className="align-self-center"
-                      disabled={accountCredit <= 0 || (isChecked && rcError !== "")}
-                      onClick={() => {
-                        setCreateOption("credit");
-                        setShowModal(true);
-                        setStep("sign");
-                      }}
-                    >
-                      {_t("onboard.create-account-credit", { n: accountCredit })}
-                    </Button>
-                  </div>
-
-                  {/* Lightning QR */}
-                  <div className="qr-section">
-                    <Button
-                      className="align-self-center"
-                      onClick={async () => {
-                        await getLightningAcc();
-                      }}
-                    >
-                      Pay with bitcoin lightning
-                    </Button>
-                    {invoiceData && (
-                       <>
-                        <p>Scan QR to complete payment</p>
-                        <QRCode
-                          size={256}
-                          style={{ height: "300px", width: "300px" }}
-                          value={`lightning:${invoiceData?.payment_request}`}
-                          viewBox={`0 0 256 256`}
-                        />
-                       </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          ) : (
-            <div className="login-warning">{_t("onboard.login-warning")}</div>
+                )
+              ) : (
+                <div className="login-warning">{_t("onboard.login-warning")}</div>
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      {props.match.params.type === "confirming" && (
-        <div className="onboard-container">
-          <div className="login-warning">
-            <span>
-              {_t("onboard.success-message")}{" "}
-              <strong>@{formatUsername(decodedInfo!.username)}</strong>
-            </span>
-          </div>
-          <Link to={`/@${formatUsername(decodedInfo!.username)}`}>
-            <Button
-              className="mt-3 w-[50%] align-self-center"
-              onClick={() => {
-                const { location } = props;
-                const queryParams = new URLSearchParams(location.search);
-                if (queryParams.has("tid")) {
-                  sendMail();
-                }
-              }}
-            >
-              {_t("g.finish")}
-            </Button>
-          </Link>
-        </div>
+          {props.match.params.type === "confirming" && (
+            <div className="onboard-container">
+              <div className="login-warning">
+                <span>
+                  {_t("onboard.success-message")}{" "}
+                  <strong>@{formatUsername(decodedInfo!.username)}</strong>
+                </span>
+              </div>
+              <Link to={`/@${formatUsername(decodedInfo!.username)}`}>
+                <Button
+                  className="mt-3 w-[50%] align-self-center"
+                  onClick={() => {
+                    const { location } = props;
+                    const queryParams = new URLSearchParams(location.search);
+                    if (queryParams.has("tid")) {
+                      sendMail();
+                    }
+                  }}
+                >
+                  {_t("g.finish")}
+                </Button>
+              </Link>
+            </div>
+          )}
+        </>
       )}
 
       <Modal

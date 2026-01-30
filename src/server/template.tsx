@@ -74,10 +74,10 @@ export const render = (req: express.Request, state: AppState) => {
   // --- Clear query cache ---
   queryClient.clear();
 
-  console.log("communityTitle....", communityTitle)
-  console.log("communityDescription....", communityDescription)
-  console.log("communityImage....", communityImage)
-  console.log("communityUrl....", communityUrl)
+  console.log("communityTitle....", communityTitle);
+  console.log("communityDescription....", communityDescription);
+  console.log("communityImage....", communityImage);
+  console.log("communityUrl....", communityUrl);
 
   // --- Return full HTML ---
   return `<!DOCTYPE html>

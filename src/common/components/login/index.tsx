@@ -162,7 +162,7 @@ export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
     // const signer = (message: string): Promise<string> =>
     //   signBuffer(username, message, "Posting").then((r) => r.result);
 
-    const signer = async (message: string): Promise<string> => {      
+    const signer = async (message: string): Promise<string> => {
       const ts: any = Date.now();
       const sign = await signBuffer(username, message, "Posting").then((r) => r.result);
       const signBa = await signBuffer(username, `${username}${ts}`, "Posting").then(
@@ -211,49 +211,48 @@ export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
   };
 
   setQrValue = (a: any) => {
-    this.setState({evt: a})
-  }
+    this.setState({ evt: a });
+  };
 
   setSign = (sign: any) => {
-    this.setState({hasSign: sign})
-  }
+    this.setState({ hasSign: sign });
+  };
 
   confirmMobileLogin = async () => {
     const { username, hasSign } = this.state;
     const { hsClientId } = this.props.global;
-    
+
     const base64 = b64uEnc(JSON.stringify(hasSign));
-    
+
     const account = await getAccount(username);
 
     const { doLogin } = this.props;
-        doLogin(base64, null, account)
-          .then(() => {
-            this.hide();
-          })
-          .catch(() => {
-            error(_t("g.server-error"));
-          })
-          .finally(() => {
-            this.stateSet({ inProgress: false });
-          });
-  }
-  
+    doLogin(base64, null, account)
+      .then(() => {
+        this.hide();
+      })
+      .catch(() => {
+        error(_t("g.server-error"));
+      })
+      .finally(() => {
+        this.stateSet({ inProgress: false });
+      });
+  };
+
   render() {
     const { username, inProgress, evtURI, useQR, evt } = this.state;
-    console.log("object..,evt", evt)
+    console.log("object..,evt", evt);
 
     const keyChainLogo = require("../../img/keychain.png");
 
     const spinner = <Spinner className="mr-[6px] w-3.5 h-3.5" />;
-    
-    
+
     const op: any = [
       "login",
       {
         username,
-        token: Math.floor(Date.now() / 1000).toString(),
-      },
+        token: Math.floor(Date.now() / 1000).toString()
+      }
     ];
 
     return (
@@ -285,36 +284,37 @@ export class LoginKc extends BaseComponent<LoginKcProps, LoginKcState> {
               {inProgress && spinner}
               {_t("g.login")}
             </Button>
-              
+
             <Button outline={true} className="block" disabled={inProgress} onClick={this.back}>
               {_t("g.back")}
             </Button>
-            <Button onClick={()=> {
-              this.handleGenerateQR()
-              this.setState({useQR: true})
-              }}>
+            <Button
+              onClick={() => {
+                this.handleGenerateQR();
+                this.setState({ useQR: true });
+              }}
+            >
               Get login Qr
             </Button>
           </div>
 
-          {this.state.evt && <div className="mobileQr">
-            <h4>Scan or clikc QR code</h4>
-              <a 
-              href={evt} 
-              onClick={this.login}
-              >
+          {this.state.evt && (
+            <div className="mobileQr">
+              <h4>Scan or clikc QR code</h4>
+              <a href={evt} onClick={this.login}>
                 <QRCode
-                      size={256}
-                      style={{
-                        height: "300",
-                        // maxWidth: "100%",
-                        width: "300"
-                      }}
-                      value={evt}
-                      viewBox={`0 0 256 256`}
-                    />
+                  size={256}
+                  style={{
+                    height: "300",
+                    // maxWidth: "100%",
+                    width: "300"
+                  }}
+                  value={evt}
+                  viewBox={`0 0 256 256`}
+                />
               </a>
-          </div>}
+            </div>
+          )}
         </Form>
       </>
     );
@@ -718,7 +718,7 @@ export class Login extends BaseComponent<LoginProps, State> {
             <OrDivider />
           </>
         )}
-{/* 
+        {/* 
         <Form
           className="login-form"
           onSubmit={(e: React.FormEvent) => {
@@ -795,8 +795,8 @@ export class Login extends BaseComponent<LoginProps, State> {
           </Button> */}
         {/* </div> */}
         {/* {global.hasKeyChain && ( */}
-          {/* <div className="kc-login"> */}
-            {/* <Button
+        {/* <div className="kc-login"> */}
+        {/* <Button
               outline={true}
               onClick={() => {
                 // this.loginHAS('')
@@ -809,8 +809,8 @@ export class Login extends BaseComponent<LoginProps, State> {
             >
               {_t("login.with-keychain")}
             </Button> */}
-            <LoginKc {...this.props} doLogin={this.props.doLogin} />
-          {/* </div> */}
+        <LoginKc {...this.props} doLogin={this.props.doLogin} />
+        {/* </div> */}
         {/* )} */}
         {activeUser === null && (
           <p>
